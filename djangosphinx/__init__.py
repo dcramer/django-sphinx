@@ -173,8 +173,7 @@ class SphinxSearch(object):
 		return self._result_cache
 
 	def query(self, string):
-		# TODO: make this have unicode support
-		self._query = str(string)
+		self._query = unicode(string)
 		return self
 
 	def mode(self, mode):
@@ -337,8 +336,9 @@ class SphinxSearch(object):
 		req = [pack('>4L', self._offset, self._limit, self._mode, self._sort)]
 		req.append(pack('>L', len(self._sortby)))
 		req.append(self._sortby)
-		req.append(pack('>L', len(self._query)))
-		req.append(self._query)
+		q = self._query.encode('utf-8')
+		req.append(pack('>L', len(q)))
+		req.append(q)
 		req.append(pack('>L', len(self._weights)))
 		for w in self._weights:
 			req.append(pack('>L', w))
