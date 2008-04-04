@@ -1,2 +1,3 @@
 setup.py
-django-sphinx/__init__.py
+djangosphinx/__init__.py
+djangosphinx/api117.py
