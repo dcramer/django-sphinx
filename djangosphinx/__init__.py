@@ -343,11 +343,11 @@ class SphinxSearch(object):
         _args = self._select_related_fields[:]
         _args.extend(args)
         _kwargs = self._select_related_args.copy()
-        _kwargs.extend(kwargs)
+        _kwargs.update(kwargs)
         
         return self._clone(
             _select_related=True,
-            _select_related_fields=args,
+            _select_related_fields=_args,
             _select_related_args=_kwargs,
         )
     
