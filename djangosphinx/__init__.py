@@ -37,9 +37,9 @@ import time
 import struct
 
 try:
-    from sphinxapi import SPH_SORT_RELEVANCE, SPH_GROUPBY_DAY, SPH_MATCH_EXTENDED, VER_COMMAND_SEARCH, SphinxClient
+    from sphinxapi import SPH_SORT_RELEVANCE, SPH_GROUPBY_DAY, SPH_MATCH_ALL, VER_COMMAND_SEARCH, SphinxClient
 except ImportError:
-    from api117 import SPH_SORT_RELEVANCE, SPH_GROUPBY_DAY, SPH_MATCH_EXTENDED, VER_COMMAND_SEARCH, SphinxClient
+    from api117 import SPH_SORT_RELEVANCE, SPH_GROUPBY_DAY, SPH_MATCH_ALL, VER_COMMAND_SEARCH, SphinxClient
 
 from django.db.models.query import QuerySet
 from django.conf import settings
@@ -216,7 +216,7 @@ class SphinxSearch(object):
 
         self._maxmatches            = 1000
         self._result_cache          = None
-        self._mode                  = SPH_MATCH_EXTENDED
+        self._mode                  = SPH_MATCH_ALL
         self._model                 = None
         self._anchor                = {}
         
@@ -372,8 +372,7 @@ class SphinxSearch(object):
         if self._sort:
             client.SetSortMode(*self._sort)
 
-        if self._weights:
-            client.SetWeights(self._weights)
+        client.SetWeights(self._weights)
 
         client.SetMatchMode(self._mode)
 
