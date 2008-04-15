@@ -403,8 +403,13 @@ class SphinxSearch(object):
         results = client.Query(self._query, self._index)
         
         # The Sphinx API doesn't raise exceptions
-        if not results and client.GetLastError():
-            raise SearchError, client.GetLastError()
+        if results is None:
+            if client.GetLastError():
+                raise SearchError, client.GetLastError()
+            elif client.GetLastWarning():
+                raise SearchError, client.GetLastWarning()
+            else:
+                raise SearchError, "Unknown Error"
         return results
 
     def _get_results(self):
