@@ -56,19 +56,8 @@ SPHINX_PORT             = getattr(settings, 'SPHINX_PORT', 3312)
 SPHINX_RETRIES          = getattr(settings, 'SPHINX_RETRIES', 0)
 SPHINX_RETRIES_DELAY    = getattr(settings, 'SPHINX_RETRIES_DELAY', 5)
 
-class SearchError(Exception):
-    def __init__(self, message):
-        self.message = message
-
-    def __str__(self):
-        return str(self.message)
-
-class ConnectionError(Exception):
-    def __init__(self, message):
-        self.message = message
-
-    def __str__(self):
-        return str(self.message)
+class SearchError(Exception): pass
+class ConnectionError(Exception): pass
 
 class SphinxProxy(object):
     """
@@ -195,10 +184,7 @@ class SphinxProxy(object):
 class SphinxSearch(object):
     def __init__(self, index=None, **kwargs):
         self.init()
-        if index:
-            self._index = index
-        else:
-            self._index = None
+        self._index = index
         if 'mode' in kwargs:
             self.mode(kwargs['mode'])
         if 'weights' in kwargs:
