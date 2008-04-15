@@ -230,7 +230,7 @@ class SphinxSearch(object):
         return self
 
     def __repr__(self):
-        if self._result_cache:
+        if self._result_cache is not None:
             return repr(self._get_data())
         else:
             return '<%s instance>' % (self.__class__.__name__,)
