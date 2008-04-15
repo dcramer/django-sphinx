@@ -389,12 +389,14 @@ class SphinxSearch(object):
         # Include filters
         if self._filters:
             for name, values in self._filters.iteritems():
-                client.SetFilter(name, values)
+                for value in values:
+                    client.SetFilter(name, values)
 
         # Exclude filters
         if self._excludes:
             for name, values in self._excludes.iteritems():
-                client.SetFilter(name, values, exclude=1)
+                for value in values:
+                    client.SetFilter(name, values, exclude=1)
         
         if self._filter_range:
             client.SetIDRange(*self._filter_range)
