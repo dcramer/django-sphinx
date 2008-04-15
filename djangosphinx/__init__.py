@@ -410,13 +410,11 @@ class SphinxSearch(object):
                 raise SearchError, client.GetLastError()
             elif client.GetLastWarning():
                 raise SearchError, client.GetLastWarning()
-            else:
-                results = {}
         return results
 
     def _get_results(self):
         results = self._get_sphinx_results()
-        if not results['matches']: return []
+        if not results: return []
         if results['matches'] and self._model:
             qs = self._model.objects.filter(pk__in=[r['id'] for r in results['matches']])
             if self._select_related:
