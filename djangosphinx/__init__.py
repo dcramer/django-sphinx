@@ -375,7 +375,7 @@ class SphinxSearch(object):
         if self._weights:
             client.SetWeights(self._weights)
 
-        self.SetMatchMode(self._mode)
+        client.SetMatchMode(self._mode)
 
         # Include filters
         if self._filters:
