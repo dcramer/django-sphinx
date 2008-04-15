@@ -230,7 +230,10 @@ class SphinxSearch(object):
         return self
 
     def __repr__(self):
-        return repr(self._get_data())
+        if self._result_cache:
+            return repr(self._get_data())
+        else:
+            return '<%s instance>' % (self.__class__.__name__,)
                 
     def __len__(self):
         return len(self._get_data())
