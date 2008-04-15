@@ -212,7 +212,7 @@ class SphinxSearch(object):
         self._filter_range          = None
         self._groupby               = None
         self._sort                  = None
-        self._weights               = None
+        self._weights               = [1, 100]
 
         self._maxmatches            = 1000
         self._result_cache          = None
@@ -375,6 +375,8 @@ class SphinxSearch(object):
         if self._weights:
             client.SetWeights(self._weights)
 
+        self.SetMatchMode(self._mode)
+
         # Include filters
         if self._filters:
             for name, values in self._filters.iteritems():
@@ -396,7 +398,7 @@ class SphinxSearch(object):
         if self._anchor:
             client.SetGeoAnchor(self._anchor)
 
-        client.SetLimits(self._offset, self._limit, self._maxmatches)
+        client.SetLimits(self._offset, self._limit, max(self._limit, self._maxmatches))
         if VER_COMMAND_SEARCH >= 0x113:
             client.SetRetries(SPHINX_RETRIES, SPHINX_RETRIES_DELAY)
         
