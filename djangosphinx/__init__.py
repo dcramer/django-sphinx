@@ -37,9 +37,9 @@ import time
 import struct
 
 try:
-    from sphinxapi import SPH_SORT_RELEVANCE, SPH_GROUPBY_DAY, SPH_MATCH_ALL, VER_COMMAND_SEARCH, SphinxClient
+    import sphinxapi
 except ImportError:
-    from api117 import SPH_SORT_RELEVANCE, SPH_GROUPBY_DAY, SPH_MATCH_ALL, VER_COMMAND_SEARCH, SphinxClient
+    import api117 as sphinxapi
 
 from django.db.models.query import QuerySet
 from django.conf import settings
@@ -216,7 +216,7 @@ class SphinxSearch(object):
 
         self._maxmatches            = 1000
         self._result_cache          = None
-        self._mode                  = SPH_MATCH_ALL
+        self._mode                  = sphinxapi.SPH_MATCH_ALL
         self._model                 = None
         self._anchor                = {}
         
@@ -289,7 +289,7 @@ class SphinxSearch(object):
         return self._clone(_filters=filters)
 
     def geoanchor(self, **kwargs):
-        assert(VER_COMMAND_SEARCH >= 0x113, "You must upgrade sphinxapi to version 1.19 to use Geo Anchoring.")
+        assert(sphinxapi.VER_COMMAND_SEARCH >= 0x113, "You must upgrade sphinxapi to version 1.19 to use Geo Anchoring.")
         return self._clone(_anchor=kwargs)
 
     def on_index(self, index):
@@ -324,7 +324,7 @@ class SphinxSearch(object):
                 arg = '@id'
             sort_by.append('%s %s' % (arg, sort))
         if sort_by:
-            return self._clone(_sort=(SPH_SORT_EXTENDED, ', '.join(sort_by)))
+            return self._clone(_sort=(sphinxapi.SPH_SORT_EXTENDED, ', '.join(sort_by)))
         return self
                     
     # pass these thru on the queryset and let django handle it
@@ -366,7 +366,7 @@ class SphinxSearch(object):
         return self._result_cache
 
     def _get_sphinx_results(self):
-        client = SphinxClient()
+        client = sphinxapi.SphinxClient()
         client.SetServer(SPHINX_SERVER, SPHINX_PORT)
 
         if self._sort:
@@ -398,7 +398,7 @@ class SphinxSearch(object):
             client.SetGeoAnchor(self._anchor)
 
         client.SetLimits(self._offset, self._limit, max(self._limit, self._maxmatches))
-        if VER_COMMAND_SEARCH >= 0x113:
+        if sphinxapi.VER_COMMAND_SEARCH >= 0x113:
             client.SetRetries(SPHINX_RETRIES, SPHINX_RETRIES_DELAY)
         
         results = client.Query(self._query, self._index)
