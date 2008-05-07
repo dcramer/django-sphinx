@@ -266,7 +266,7 @@ class SphinxSearch(object):
             return self._result_cache[k]
 
     def query(self, string):
-        return self._clone(_query=string)
+        return self._clone(_query=unicode(string).encode('utf-8'))
 
     def mode(self, mode):
         return self._clone(_mode=mode)
