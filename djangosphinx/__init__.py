@@ -281,10 +281,9 @@ class SphinxSearch(object):
     def filter(self, **kwargs):
         filters = self._filters.copy()
         for k,v in kwargs.iteritems():
-            if not isinstance(v, list):
+            if not (isinstance(v, list) or isinstance(v, tuple)):
                 v = [v,]
-            v = [isinstance(value, bool) and value and 1 or 0 or int(value) for value in v]
-            filters.setdefault(k, []).append(v)
+            filters.setdefault(k, []).append(map(int, v))
 
         return self._clone(_filters=filters)
 
@@ -376,17 +375,19 @@ class SphinxSearch(object):
 
         client.SetMatchMode(self._mode)
 
+        if hasattr(client, 'ResetFilter'):
+            # TODO: convince Sphinx guy to change this ugliness
+            client.ResetFilter()
+
         # Include filters
         if self._filters:
             for name, values in self._filters.iteritems():
-                for value in values:
-                    client.SetFilter(name, value)
+                client.SetFilter(name, values)
 
         # Exclude filters
         if self._excludes:
             for name, values in self._excludes.iteritems():
-                for value in values:
-                    client.SetFilter(name, value, exclude=1)
+                client.SetFilter(name, values, exclude=1)
         
         if self._filter_range:
             client.SetIDRange(*self._filter_range)
