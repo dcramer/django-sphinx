@@ -11,7 +11,7 @@ except ImportError:
 from django.db.models.query import QuerySet
 from django.conf import settings
 
-__all__ = ('SearchError', 'ConnectionError', 'SphinxSearch')
+__all__ = ('SearchError', 'ConnectionError', 'SphinxSearch', 'SphinxRelation')
 
 from django.contrib.contenttypes.models import ContentType
 from datetime import datetime, date
@@ -23,6 +23,8 @@ SPHINX_PORT             = getattr(settings, 'SPHINX_PORT', 3312)
 # These require search API 1.19 (Sphinx 0.9.8)
 SPHINX_RETRIES          = getattr(settings, 'SPHINX_RETRIES', 0)
 SPHINX_RETRIES_DELAY    = getattr(settings, 'SPHINX_RETRIES_DELAY', 5)
+
+MAX_INT = int(2**31-1)
 
 class SearchError(Exception): pass
 class ConnectionError(Exception): pass
@@ -185,6 +187,7 @@ class SphinxSearch(object):
         self._maxmatches            = 1000
         self._result_cache          = None
         self._mode                  = sphinxapi.SPH_MATCH_ALL
+        self._rankmode              = sphinxapi.SPH_RANK_PROXIMITY_BM25
         self._model                 = None
         self._anchor                = {}
         
@@ -232,6 +235,9 @@ class SphinxSearch(object):
                 return self._get_results()[0]
         else:
             return self._result_cache[k]
+
+    def rank_none(self):
+        return self._clone(_rankmode=sphinxapi.SPH_RANK_NONE)
 
     def query(self, string):
         return self._clone(_query=unicode(string).encode('utf-8'))
@@ -358,7 +364,25 @@ class SphinxSearch(object):
         # Include filters
         if self._filters:
             for name, values in self._filters.iteritems():
-                client.SetFilter(name, values)
+                parts = len(name.split('__'))
+                if parts > 2:
+                    raise NotImplementedError, 'Related object and/or multiple field lookups not supported'
+                elif parts == 2:
+                    name, lookup = name.split('__', 1)
+                    if lookup == 'gt':
+                        client.SetFilterRange(name, values[0][0]+1, MAX_INT)
+                    elif lookup == 'gte':
+                        client.SetFilterRange(name, values[0][0], MAX_INT)
+                    elif lookup == 'lt':
+                        client.SetFilterRange(name, -MAX_INT, values[0][0]-1)
+                    elif lookup == 'lte':
+                        client.SetFilterRange(name, -MAX_INT, values[0][0])
+                    elif lookup == 'range':
+                        client.SetFilterRange(name, values[0][0], values[0][1])
+                    else:
+                        raise NotImplementedError, 'Related object and/or field lookup "%s" not supported' % lookup
+                else:
+                    client.SetFilter(name, values)
 
         # Exclude filters
         if self._excludes:
@@ -430,3 +454,81 @@ class SphinxSearch(object):
             results = []
         self._result_cache = results
         return results
+
+class SphinxRelationProxy(SphinxProxy):
+    def count(self):
+        return self._sphinx['attrs']['@count']
+    
+class SphinxRelation(SphinxSearch):
+    """
+    Adds "related model" support to django-sphinx --
+    http://code.google.com/p/django-sphinx/
+    http://www.sphinxsearch.com/
+    
+    Example --
+    
+    class MySearch(SphinxSearch):
+        myrelatedobject = SphinxRelation(RelatedModel)
+        anotherone = SphinxRelation(AnotherModel)
+        ...
+    
+    class MyModel(models.Model):
+        search = MySearch('index')
+    
+    """
+    def __init__(self, model=None, attr=None, sort='@count desc', **kwargs):
+        if model:
+            self._related_model = model
+            self._related_attr = attr or model.__name__.lower()
+            self._related_sort = sort
+        super(SphinxRelation, self).__init__(**kwargs)
+        
+    def __get__(self, instance, instance_model, **kwargs):
+        self._mode = instance._mode
+        self._rankmode = instance._rankmode
+        self._index = instance._index
+        self._query = instance._query
+        self._filters = instance._filters
+        self._model = self._related_model
+        self._groupby = self._related_attr
+        self._groupsort = self._related_sort
+        self._groupfunc = sphinxapi.SPH_GROUPBY_ATTR
+        return self
+
+    def _get_results(self):
+        results = self._get_sphinx_results()
+        if not results: return []
+        if results['matches'] and self._model:
+            ids = []
+            for r in results['matches']:
+                value = r['attrs']['@groupby']
+                if isinstance(value, int):
+                    ids.append(value)
+                else:
+                    ids.extend()
+            qs = self._model.objects.filter(pk__in=set(ids))
+            if self._select_related:
+                qs = qs.select_related(*self._select_related_fields,
+                                       **self._select_related_args)
+            if self._extra:
+                qs = qs.extra(**self._extra)
+            queryset = dict([(o.id, o) for o in qs])
+            self.__metadata = {
+                'total': results['total'],
+                'total_found': results['total_found'],
+                'words': results['words'],
+            }
+            results = [ SphinxRelationProxy(queryset[k['attrs']['@groupby']], k) \
+                        for k in results['matches'] \
+                        if k['attrs']['@groupby'] in queryset ]
+        else:
+            results = []
+        self._result_cache = results
+        return results
+
+    def _sphinx(self):
+        if not self.__metadata:
+            # We have to force execution if this is accessed beforehand
+            self._get_data()
+        return self.__metadata
+    _sphinx = property(_sphinx)
