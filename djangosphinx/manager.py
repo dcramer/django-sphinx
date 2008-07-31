@@ -156,9 +156,9 @@ class SphinxSearch(object):
         self.init()
         self._index = index
         if 'mode' in kwargs:
-            self.mode(kwargs['mode'])
+            self._mode(kwargs['mode'])
         if 'weights' in kwargs:
-            self.weights(kwargs['weights'])
+            self._weights(kwargs['weights'])
     
     def _clone(self, **kwargs):
         # Clones the queryset passing any changed args
