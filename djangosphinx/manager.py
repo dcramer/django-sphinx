@@ -374,6 +374,10 @@ class SphinxSearch(object):
         if self._anchor:
             client.SetGeoAnchor(self._anchor)
 
+        if not self._limit > 0:
+            # Fix for Sphinx throwing an assertion error when you pass it an empty limiter
+            return []
+        
         client.SetLimits(self._offset, self._limit, max(self._limit, self._maxmatches))
         if sphinxapi.VER_COMMAND_SEARCH >= 0x113:
             client.SetRetries(SPHINX_RETRIES, SPHINX_RETRIES_DELAY)
