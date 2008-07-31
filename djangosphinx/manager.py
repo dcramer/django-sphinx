@@ -1,4 +1,3 @@
-
 import select
 import socket
 import time
@@ -15,6 +14,7 @@ from django.conf import settings
 __all__ = ('SearchError', 'ConnectionError', 'SphinxSearch')
 
 from django.contrib.contenttypes.models import ContentType
+from datetime import datetime, date
 
 # server settings
 SPHINX_SERVER           = getattr(settings, 'SPHINX_SERVER', 'localhost')
@@ -247,11 +247,19 @@ class SphinxSearch(object):
 
     # only works on attributes
     def filter(self, **kwargs):
+        def to_sphinx(value):
+            "Convert a filter value into a sphinx query value"
+            if isinstance(value, date) or isinstance(value, datetime):
+                return int(time.mktime(value.timetuple()))
+            return int(value)
+
         filters = self._filters.copy()
         for k,v in kwargs.iteritems():
-            if not (isinstance(v, list) or isinstance(v, tuple)):
-                v = [v,]
-            filters.setdefault(k, []).append(map(int, v))
+            if hasattr(v, 'next'):
+                v = list(v)
+            elif not (isinstance(v, list) or isinstance(v, tuple)):
+                 v = [v,]
+            filters.setdefault(k, []).extend(map(to_sphinx, v))
 
         return self._clone(_filters=filters)
 
