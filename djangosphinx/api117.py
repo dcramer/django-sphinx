@@ -251,8 +251,7 @@ class SphinxClient:
 		assert(isinstance(values, list))
 		assert(values)
 
-		for value in values:
-			assert(isinstance(value, int))
+		values = map(int, values)
 
 		self._filters.append ( { 'attr':attribute, 'exclude':exclude, 'values':values } )
 

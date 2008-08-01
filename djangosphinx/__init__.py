@@ -32,4 +32,4 @@ default settings.py values
 """
 
 from manager import SearchError, ConnectionError, SphinxSearch
-from utils import generate_config_for_model
+from utils import generate_config_for_model, generate_config_for_models
