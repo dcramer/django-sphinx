@@ -187,7 +187,7 @@ class SphinxSearch(object):
         self._maxmatches            = 1000
         self._result_cache          = None
         self._mode                  = sphinxapi.SPH_MATCH_ALL
-        self._rankmode              = sphinxapi.SPH_RANK_PROXIMITY_BM25
+        self._rankmode              = getattr(sphinxapi, 'SPH_RANK_PROXIMITY_BM25', None)
         self._model                 = None
         self._anchor                = {}
         

@@ -38,7 +38,7 @@ def generate_config_for_model(model_class, sphinx_params=DEFAULT_SPHINX_PARAMS):
 
 def generate_index_for_model(model_class, sphinx_params=DEFAULT_SPHINX_PARAMS):
     """Generates a source configmration for a model."""
-    fp = open(os.path.join(os.path.dirname(__file__), 'templates/index.conf'), 'r')
+    fp = open(os.path.join(os.path.dirname(__file__), '../templates/index.conf'), 'r')
     t = Template(fp.read())
     fp.close()
     
@@ -57,7 +57,7 @@ def generate_index_for_model(model_class, sphinx_params=DEFAULT_SPHINX_PARAMS):
 
 def generate_source_for_model(model_class, sphinx_params=DEFAULT_SPHINX_PARAMS):
     """Generates a source configmration for a model."""
-    fp = open(os.path.join(os.path.dirname(__file__), 'templates/source.conf'), 'r')
+    fp = open(os.path.join(os.path.dirname(__file__), '../templates/source.conf'), 'r')
     t = Template(fp.read())
     fp.close()
     
@@ -95,7 +95,7 @@ def generate_config_for_models(model_classes, sphinx_params=DEFAULT_SPHINX_PARAM
 
 def generate_index_for_models(model_classes, sphinx_params=DEFAULT_SPHINX_PARAMS):
     """Generates a source configmration for a model."""
-    fp = open(os.path.join(os.path.dirname(__file__), 'templates/index-multiple.conf'), 'r')
+    fp = open(os.path.join(os.path.dirname(__file__), '../templates/index-multiple.conf'), 'r')
     t = Template(fp.read())
     fp.close()
     
@@ -114,7 +114,7 @@ def generate_index_for_models(model_classes, sphinx_params=DEFAULT_SPHINX_PARAMS
 
 def generate_source_for_models(model_classes, sphinx_params=DEFAULT_SPHINX_PARAMS):
     """Generates a source configmration for a model."""
-    fp = open(os.path.join(os.path.dirname(__file__), 'templates/source-multiple.conf'), 'r')
+    fp = open(os.path.join(os.path.dirname(__file__), '../templates/source-multiple.conf'), 'r')
     t = Template(fp.read())
     fp.close()
     
