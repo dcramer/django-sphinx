@@ -6,6 +6,8 @@ from django.contrib.contenttypes.models import ContentType
 
 import os.path
 
+__all__ = ('generate_config_for_model', 'generate_config_for_models')
+
 def _get_database_engine():
     if settings.DATABASE_ENGINE == 'mysql':
         return settings.DATABASE_ENGINE
