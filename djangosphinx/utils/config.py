@@ -54,6 +54,7 @@ def generate_index_for_model(model_class, sphinx_params=DEFAULT_SPHINX_PARAMS):
     c = Context(params)
     
     return t.render(c)
+    
 
 def generate_source_for_model(model_class, sphinx_params=DEFAULT_SPHINX_PARAMS):
     """Generates a source configmration for a model."""
@@ -76,7 +77,7 @@ def generate_source_for_model(model_class, sphinx_params=DEFAULT_SPHINX_PARAMS):
         'table_name': index_name,
         'primary_key': model_class._meta.pk.attname,
         'field_names': [f.attname for f in valid_fields],
-        'group_columns': [f.attname for f in valid_fields if f.rel or isinstance(f, models.BooleanField) or isinstance(f, models.IntegerField)],
+        'group_columns': [f.attname for f in valid_fields if (f.rel or isinstance(f, models.BooleanField) or isinstance(f, models.IntegerField)) and not f.primary_key],
         'date_columns': [f.attname for f in valid_fields if isinstance(f, models.DateTimeField) or isinstance(f, models.DateField)],
     })
     
