@@ -7,6 +7,6 @@ setup(name='djangosphinx',
       description='Sphinx Full-text Search',
       author='David Cramer',
       author_email='dcramer@gmail.com',
-      url='http://code.curse.com/p/django-sphinx/',
+      url='http://code.google.com/p/django-sphinx/',
       packages=['djangosphinx'],
      )
