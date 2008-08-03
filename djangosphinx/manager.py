@@ -2,7 +2,7 @@ import select
 import socket
 import time
 import struct
-
+import warnings
 import apis.current as sphinxapi
 
 from django.db.models.query import QuerySet
@@ -148,23 +148,16 @@ class SphinxProxy(object):
     __enter__ = lambda x: x.__enter__()
     __exit__ = lambda x, *a, **kw: x.__exit__(*a, **kw)
 
-class SphinxSearch(object):
-    def __init__(self, index=None, **kwargs):
-        self.init()
-        self._index = index
-        if 'mode' in kwargs:
-            self._mode(kwargs['mode'])
-        if 'weights' in kwargs:
-            self._weights(kwargs['weights'])
+def to_sphinx(value):
+    "Convert a value into a sphinx query value"
+    if isinstance(value, date) or isinstance(value, datetime):
+        return int(time.mktime(value.timetuple()))
+    return int(value)
+
+class SphinxQuerySet(object):
+    available_kwargs = ('rankmode', 'mode', 'weights')
     
-    def _clone(self, **kwargs):
-        # Clones the queryset passing any changed args
-        c = self.__class__()
-        c.__dict__.update(self.__dict__)
-        c.__dict__.update(kwargs)
-        return c
-    
-    def init(self):
+    def __init__(self, model=None, **kwargs):
         self._select_related        = False
         self._select_related_args   = {}
         self._select_related_fields = []
@@ -185,24 +178,24 @@ class SphinxSearch(object):
         self._result_cache          = None
         self._mode                  = sphinxapi.SPH_MATCH_ALL
         self._rankmode              = getattr(sphinxapi, 'SPH_RANK_PROXIMITY_BM25', None)
-        self._model                 = None
+        self._model                 = model
         self._anchor                = {}
         
-    def __get__(self, instance, instance_model, **kwargs):
-        if instance != None:
-            raise AttributeError, "Manager isn't accessible via %s instances" % type.__name__
-        self.init()
-        self._model = instance_model
-        if not self._index and self._model:
-            self._index = self._model._meta.db_table
-        return self
+        for key in self.available_kwargs:
+            if key in kwargs:
+                setattr(self, key, kwargs[key])
+
+        if model:
+            self._index             = kwargs.get('index', model._meta.db_table)
+        else:
+            self._index             = kwargs.get('index')
 
     def __repr__(self):
         if self._result_cache is not None:
             return repr(self._get_data())
         else:
             return '<%s instance>' % (self.__class__.__name__,)
-                
+
     def __len__(self):
         return len(self._get_data())
         
@@ -250,12 +243,6 @@ class SphinxSearch(object):
 
     # only works on attributes
     def filter(self, **kwargs):
-        def to_sphinx(value):
-            "Convert a filter value into a sphinx query value"
-            if isinstance(value, date) or isinstance(value, datetime):
-                return int(time.mktime(value.timetuple()))
-            return int(value)
-
         filters = self._filters.copy()
         for k,v in kwargs.iteritems():
             if hasattr(v, 'next'):
@@ -326,7 +313,16 @@ class SphinxSearch(object):
     def count(self):
         return self._get_sphinx_results()['total_found']
 
+    def reset(self):
+        return self.__class__(self._model, self._index)
+
     # Internal methods
+    def _clone(self, **kwargs):
+        # Clones the queryset passing any changed args
+        c = self.__class__()
+        c.__dict__.update(self.__dict__)
+        c.__dict__.update(kwargs)
+        return c
     
     def _sphinx(self):
         if not self.__metadata:
@@ -452,6 +448,62 @@ class SphinxSearch(object):
         self._result_cache = results
         return results
 
+class SphinxModelManager(object):
+    def __init__(self, model, **kwargs):
+        self._model = model
+        self._index = kwargs.get('index', model._meta.db_table)
+        self._kwargs = kwargs
+    
+    def _get_query_set(self):
+        return SphinxQuerySet(self.model, index=self._index, **self._kwargs)
+    
+    def get_index(self):
+        return self._index
+    
+    def all(self):
+        return self._get_query_set()
+    
+    def filter(self, **kwargs):
+        return self._get_query_set().filter(**kwargs)
+    
+    def query(self, **kwargs):
+        return self._get_query_set().query(**kwargs)
+
+class SphinxInstanceManager(object):
+    """Collection of tools useful for objects which are in a Sphinx index."""
+    def __init__(self, instance, index):
+        self._instance = instance
+        self._index = index
+        
+    def update(self, **kwargs):
+        assert(sphinxapi.VER_COMMAND_SEARCH >= 0x113, "You must upgrade sphinxapi to version 1.19 to use Geo Anchoring.")
+        sphinxapi.UpdateAttributes(index, kwargs.keys(), dict(self.instance.pk, map(to_sphinx, kwargs.values())))
+
+
+class SphinxSearch(object):
+    def __init__(self, index=None, **kwargs):
+        self._kwargs = kwargs
+        self._sphinx = None
+        self._index = index
+        
+    def __call__(self, index, **kwargs):
+        warnings.warn('For non-model searches use a SphinxQuerySet instance.', DeprecationWarning)
+        return SphinxQuerySet(index=index, **kwargs)
+        
+    def __get__(self, instance, model, **kwargs):
+        if instance:
+            return SphinxInstanceManager(instance, index)
+        return self._sphinx
+
+    def contribute_to_class(self, model, attname, **kwargs):
+        if self._index is None:
+            self._index = model._meta.db_table
+        self._sphinx = SphinxModelManager(model, index=self._index)
+        if getattr(model, '__sphinx_indexes__', None) is None:
+            setattr(model, '__sphinx_indexes__', [self._index])
+        else:
+            model.__sphinx_indexes__.append(self._index)
+        
 class SphinxRelationProxy(SphinxProxy):
     def count(self):
         return self._sphinx['attrs']['@count']
