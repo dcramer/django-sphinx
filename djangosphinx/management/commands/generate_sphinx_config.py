@@ -15,6 +15,7 @@ class Command(AppCommand):
         for model in model_classes:
             indexes = getattr(model, '__sphinx_indexes__', [])
             for index in indexes:
+                found += 1
                 print generate_config_for_model(model, index)
         if found == 0:
             print "Unable to find any models in application which use standard SphinxSearch configuration."
