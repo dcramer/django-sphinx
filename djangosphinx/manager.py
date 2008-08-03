@@ -3,10 +3,7 @@ import socket
 import time
 import struct
 
-try:
-    import sphinxapi
-except ImportError:
-    import api117 as sphinxapi
+import apis.current as sphinxapi
 
 from django.db.models.query import QuerySet
 from django.conf import settings

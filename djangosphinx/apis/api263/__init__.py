@@ -57,7 +57,6 @@ SPH_GROUPBY_MONTH		= 2
 SPH_GROUPBY_YEAR		= 3
 SPH_GROUPBY_ATTR		= 4
 
-
 class SphinxClient:
 	_host		= 'localhost'			# searchd host (default is "localhost")
 	_port		= 3312					# searchd port (default is 3312)
