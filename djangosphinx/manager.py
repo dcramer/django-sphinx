@@ -496,7 +496,7 @@ class SphinxSearch(object):
             return SphinxInstanceManager(instance, index)
         return self._sphinx
 
-    def contribute_to_class(self, model, attname, **kwargs):
+    def contribute_to_class(self, model, name, **kwargs):
         if self._index is None:
             self._index = model._meta.db_table
         self._sphinx = SphinxModelManager(model, index=self._index)
