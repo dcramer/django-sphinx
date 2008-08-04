@@ -455,7 +455,7 @@ class SphinxModelManager(object):
         self._kwargs = kwargs
     
     def _get_query_set(self):
-        return SphinxQuerySet(self.model, index=self._index, **self._kwargs)
+        return SphinxQuerySet(self._model, index=self._index, **self._kwargs)
     
     def get_index(self):
         return self._index
@@ -466,8 +466,8 @@ class SphinxModelManager(object):
     def filter(self, **kwargs):
         return self._get_query_set().filter(**kwargs)
     
-    def query(self, **kwargs):
-        return self._get_query_set().query(**kwargs)
+    def query(self, *args, **kwargs):
+        return self._get_query_set().query(*args, **kwargs)
 
 class SphinxInstanceManager(object):
     """Collection of tools useful for objects which are in a Sphinx index."""
