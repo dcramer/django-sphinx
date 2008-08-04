@@ -485,6 +485,7 @@ class SphinxSearch(object):
         self._kwargs = kwargs
         self._sphinx = None
         self._index = index
+        self.model = None
         
     def __call__(self, index, **kwargs):
         warnings.warn('For non-model searches use a SphinxQuerySet instance.', DeprecationWarning)
