@@ -499,11 +499,13 @@ class SphinxSearch(object):
         if self._index is None:
             self._index = model._meta.db_table
         self._sphinx = SphinxModelManager(model, index=self._index)
+        self.model = model
         if getattr(model, '__sphinx_indexes__', None) is None:
             setattr(model, '__sphinx_indexes__', [self._index])
         else:
             model.__sphinx_indexes__.append(self._index)
-        
+        setattr(model, name, self._sphinx)
+
 class SphinxRelationProxy(SphinxProxy):
     def count(self):
         return self._sphinx['attrs']['@count']
