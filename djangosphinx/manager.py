@@ -363,15 +363,15 @@ class SphinxQuerySet(object):
                 elif parts == 2:
                     name, lookup = name.split('__', 1)
                     if lookup == 'gt':
-                        client.SetFilterRange(name, values[0][0]+1, MAX_INT)
+                        client.SetFilterRange(name, values[0]+1, MAX_INT)
                     elif lookup == 'gte':
-                        client.SetFilterRange(name, values[0][0], MAX_INT)
+                        client.SetFilterRange(name, values[0], MAX_INT)
                     elif lookup == 'lt':
-                        client.SetFilterRange(name, -MAX_INT, values[0][0]-1)
+                        client.SetFilterRange(name, -MAX_INT, values[0]-1)
                     elif lookup == 'lte':
-                        client.SetFilterRange(name, -MAX_INT, values[0][0])
+                        client.SetFilterRange(name, -MAX_INT, values[0])
                     elif lookup == 'range':
-                        client.SetFilterRange(name, values[0][0], values[0][1])
+                        client.SetFilterRange(name, values[0], values[1])
                     else:
                         raise NotImplementedError, 'Related object and/or field lookup "%s" not supported' % lookup
                 else:
