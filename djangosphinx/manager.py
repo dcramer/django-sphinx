@@ -451,7 +451,7 @@ class SphinxQuerySet(object):
 class SphinxModelManager(object):
     def __init__(self, model, **kwargs):
         self._model = model
-        self._index = kwargs.get('index', model._meta.db_table)
+        self._index = kwargs.pop('index', model._meta.db_table)
         self._kwargs = kwargs
     
     def _get_query_set(self):
