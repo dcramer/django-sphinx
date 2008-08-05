@@ -183,7 +183,7 @@ class SphinxQuerySet(object):
         
         for key in self.available_kwargs:
             if key in kwargs:
-                setattr(self, key, kwargs[key])
+                setattr(self, '_%s' % (key,), kwargs[key])
 
         if model:
             self._index             = kwargs.get('index', model._meta.db_table)
@@ -500,7 +500,7 @@ class SphinxSearch(object):
     def contribute_to_class(self, model, name, **kwargs):
         if self._index is None:
             self._index = model._meta.db_table
-        self._sphinx = SphinxModelManager(model, index=self._index)
+        self._sphinx = SphinxModelManager(model, index=self._index, **self._kwargs)
         self.model = model
         if getattr(model, '__sphinx_indexes__', None) is None:
             setattr(model, '__sphinx_indexes__', [self._index])
