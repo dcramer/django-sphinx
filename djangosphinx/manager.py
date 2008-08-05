@@ -430,18 +430,17 @@ class SphinxQuerySet(object):
             results['attrs'] = dict(results['attrs'])
             if 'content_type' in results['attrs']:
                 "Now we have to do one query per content_type"
-                x = results['attrs'].index('content_type')
                 objcache = {}
                 for r in results['matches']:
-                    ct = r['attrs'][x]
+                    ct = r['attrs']['content_type']
                     if ct not in objcache:
                         objcache[ct] = {}
-                    objcache[ct][r['doc']] = None
+                    objcache[ct][r['id']] = None
                 for ct in objcache:
                     qs = ContentType.objects.get(pk=ct).model_class().objects.filter(pk__in=objcache[ct])
                     for o in qs:
                         objcache[ct][o.id] = o
-                results = [objcache[r['attrs'][x]][r['doc']] for r in results['matches']]
+                results = [objcache[r['attrs']['content_type']][r['id']] for r in results['matches']]
             else:
                 results = results['matches']
         else:
