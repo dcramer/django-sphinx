@@ -427,6 +427,7 @@ class SphinxQuerySet(object):
             results = [SphinxProxy(queryset[k['id']], {'weight': k['weight']}) for k in results['matches'] if k['id'] in queryset]
         elif results['matches']:
             "We did a query without a model, lets see if there's a content_type"
+            results['attrs'] = dict(results['attrs'])
             if 'content_type' in results['attrs']:
                 "Now we have to do one query per content_type"
                 x = results['attrs'].index('content_type')
