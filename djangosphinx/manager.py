@@ -424,7 +424,7 @@ class SphinxQuerySet(object):
                 'total_found': results['total_found'],
                 'words': results['words'],
             }
-            results = [SphinxProxy(queryset[k['id']], {'weight': k['weight']}) for k in results['matches'] if k['id'] in queryset]
+            results = [SphinxProxy(queryset[k['id']], k) for k in results['matches'] if k['id'] in queryset]
         elif results['matches']:
             "We did a query without a model, lets see if there's a content_type"
             results['attrs'] = dict(results['attrs'])
