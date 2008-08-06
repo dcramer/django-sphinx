@@ -366,12 +366,12 @@ class SphinxQuerySet(object):
                     name, lookup = name.split('__', 1)
                     is_float = isinstance(values[0], float)
                     if lookup == 'gt':
-                        value = is_float and values[0] - float(str(values[0][:-1]) + int(str(values[0][-1]))+1) or values[0]+1
+                        value = is_float and values[0] + (1.0/MAX_INT) or values[0] - 1
                         args = (name, value, MAX_INT, exclude)
                     elif lookup == 'gte':
                         args = (name, values[0], MAX_INT, exclude)
                     elif lookup == 'lt':
-                        value = is_float and values[0] - float(str(values[0][:-1]) + int(str(values[0][-1]))-1) or values[0]-1
+                        value = is_float and values[0] - (1.0/MAX_INT) or values[0] - 1
                         args = (name, -MAX_INT, value, exclude)
                     elif lookup == 'lte':
                         args = (name, -MAX_INT, values[0], exclude)
