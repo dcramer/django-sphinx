@@ -250,7 +250,6 @@ class SphinxQuerySet(object):
             elif not (isinstance(v, list) or isinstance(v, tuple)):
                  v = [v,]
             filters.setdefault(k, []).extend(map(to_sphinx, v))
-
         return self._clone(_filters=filters)
 
     def geoanchor(self, lat_attr, lng_attr, lat, lng):
@@ -333,7 +332,6 @@ class SphinxQuerySet(object):
 
     def _get_data(self):
         assert(self._index)
-        assert(self._query)
         # need to find a way to make this work yet
         if self._result_cache is None:
             self._result_cache = list(self._get_results())
@@ -346,7 +344,11 @@ class SphinxQuerySet(object):
         if self._sort:
             client.SetSortMode(*self._sort)
 
-        client.SetWeights(self._weights)
+        if isinstance(self._weights, list) or isinstance(self._weights, tuple):
+            client.SetWeights(self._weights)
+        else:
+            # assume its a dict
+            client.SetFieldWeights(self._weights)
 
         client.SetMatchMode(self._mode)
 
@@ -354,33 +356,46 @@ class SphinxQuerySet(object):
             # TODO: convince Sphinx guy to change this ugliness
             client.ResetFilter()
 
-        # Include filters
-        if self._filters:
-            for name, values in self._filters.iteritems():
+        def _handle_filters(filter_list, exclude=False):
+            for name, values in filter_list.iteritems():
                 parts = len(name.split('__'))
                 if parts > 2:
                     raise NotImplementedError, 'Related object and/or multiple field lookups not supported'
                 elif parts == 2:
+                    # The float handling for __gt and __lt is kind of ugly..
                     name, lookup = name.split('__', 1)
+                    is_float = isinstance(values[0], float)
                     if lookup == 'gt':
-                        client.SetFilterRange(name, values[0]+1, MAX_INT)
+                        value = is_float and values[0] - float(str(values[0][:-1]) + int(str(values[0][-1]))+1) or values[0]+1
+                        args = (name, value, MAX_INT, exclude)
                     elif lookup == 'gte':
-                        client.SetFilterRange(name, values[0], MAX_INT)
+                        args = (name, values[0], MAX_INT, exclude)
                     elif lookup == 'lt':
-                        client.SetFilterRange(name, -MAX_INT, values[0]-1)
+                        value = is_float and values[0] - float(str(values[0][:-1]) + int(str(values[0][-1]))-1) or values[0]-1
+                        args = (name, -MAX_INT, value, exclude)
                     elif lookup == 'lte':
-                        client.SetFilterRange(name, -MAX_INT, values[0])
+                        args = (name, -MAX_INT, values[0], exclude)
                     elif lookup == 'range':
-                        client.SetFilterRange(name, values[0], values[1])
+                        args = (name, values[0], values[1], exclude)
                     else:
                         raise NotImplementedError, 'Related object and/or field lookup "%s" not supported' % lookup
+                    if is_float:
+                        client.SetFilterFloatRange(*args)
+                    elif not exclude and self._model and name == self._model._meta.pk.column:
+                        client.SetIDRange(*args[1:3])
+                    else:
+                        client.SetFilterRange(*args)
+
                 else:
-                    client.SetFilter(name, values)
+                    client.SetFilter(name, values, exclude)
+
+        # Include filters
+        if self._filters:
+            _handle_filters(self._filters)
 
         # Exclude filters
         if self._excludes:
-            for name, values in self._excludes.iteritems():
-                client.SetFilter(name, values, exclude=1)
+            _handle_filters(self.self._excludes, True)
         
         if self._filter_range:
             client.SetIDRange(*self._filter_range)
