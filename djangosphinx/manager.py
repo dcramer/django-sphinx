@@ -253,9 +253,9 @@ class SphinxQuerySet(object):
 
         return self._clone(_filters=filters)
 
-    def geoanchor(self, **kwargs):
+    def geoanchor(self, lat_attr, lng_attr, lat, lng):
         assert(sphinxapi.VER_COMMAND_SEARCH >= 0x113, "You must upgrade sphinxapi to version 1.19 to use Geo Anchoring.")
-        return self._clone(_anchor=kwargs)
+        return self._clone(_anchor=(lat_attr, lng_attr, float(lat), float(lng)))
 
     def on_index(self, index):
         return self._clone(_index=index)
@@ -389,7 +389,7 @@ class SphinxQuerySet(object):
             client.SetGroupBy(self._groupby, self._groupfunc, self._groupsort)
 
         if self._anchor:
-            client.SetGeoAnchor(self._anchor)
+            client.SetGeoAnchor(*self._anchor)
 
         if not self._limit > 0:
             # Fix for Sphinx throwing an assertion error when you pass it an empty limiter
@@ -468,6 +468,12 @@ class SphinxModelManager(object):
     
     def query(self, *args, **kwargs):
         return self._get_query_set().query(*args, **kwargs)
+
+    def on_index(self, *args, **kwargs):
+        return self._get_query_set().on_index(*args, **kwargs)
+
+    def geoanchor(self, *args, **kwargs):
+        return self._get_query_set().geoanchor(*args, **kwargs)
 
 class SphinxInstanceManager(object):
     """Collection of tools useful for objects which are in a Sphinx index."""
