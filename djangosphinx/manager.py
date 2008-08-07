@@ -169,7 +169,6 @@ class SphinxQuerySet(object):
         self._offset                = 0
         self._limit                 = 20
 
-        self._filter_range          = None
         self._groupby               = None
         self._sort                  = None
         self._weights               = [1, 100]
@@ -343,19 +342,19 @@ class SphinxQuerySet(object):
 
         if self._sort:
             client.SetSortMode(*self._sort)
-
+        
         if isinstance(self._weights, list) or isinstance(self._weights, tuple):
             client.SetWeights(self._weights)
         else:
             # assume its a dict
             client.SetFieldWeights(self._weights)
-
+        
         client.SetMatchMode(self._mode)
 
         if hasattr(client, 'ResetFilter'):
-            # TODO: convince Sphinx guy to change this ugliness
-            client.ResetFilter()
-
+                    # TODO: convince Sphinx guy to change this ugliness
+                    client.ResetFilter()
+        
         def _handle_filters(filter_list, exclude=False):
             for name, values in filter_list.iteritems():
                 parts = len(name.split('__'))
@@ -397,14 +396,14 @@ class SphinxQuerySet(object):
         if self._excludes:
             _handle_filters(self.self._excludes, True)
         
-        if self._filter_range:
-            client.SetIDRange(*self._filter_range)
-
         if self._groupby:
             client.SetGroupBy(self._groupby, self._groupfunc, self._groupsort)
 
         if self._anchor:
             client.SetGeoAnchor(*self._anchor)
+
+        if self._rankmode:
+            client.SetRankingMode(self._rankmode)
 
         if not self._limit > 0:
             # Fix for Sphinx throwing an assertion error when you pass it an empty limiter
