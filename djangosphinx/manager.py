@@ -2,7 +2,6 @@ import select
 import socket
 import time
 import struct
-import operator
 import decimal
 import warnings
 import apis.current as sphinxapi
