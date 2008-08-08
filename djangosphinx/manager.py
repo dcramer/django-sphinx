@@ -2,6 +2,8 @@ import select
 import socket
 import time
 import struct
+import operator
+import decimal
 import warnings
 import apis.current as sphinxapi
 
@@ -17,7 +19,7 @@ from datetime import datetime, date
 SPHINX_SERVER           = getattr(settings, 'SPHINX_SERVER', 'localhost')
 SPHINX_PORT             = getattr(settings, 'SPHINX_PORT', 3312)
 
-# These require search API 1.19 (Sphinx 0.9.8)
+# These require search API 275 (Sphinx 0.9.8)
 SPHINX_RETRIES          = getattr(settings, 'SPHINX_RETRIES', 0)
 SPHINX_RETRIES_DELAY    = getattr(settings, 'SPHINX_RETRIES_DELAY', 5)
 
@@ -152,6 +154,8 @@ def to_sphinx(value):
     "Convert a value into a sphinx query value"
     if isinstance(value, date) or isinstance(value, datetime):
         return int(time.mktime(value.timetuple()))
+    elif isinstance(value, decimal.Decimal) or isinstance(value, float):
+        return float(value)
     return int(value)
 
 class SphinxQuerySet(object):
@@ -252,7 +256,7 @@ class SphinxQuerySet(object):
         return self._clone(_filters=filters)
 
     def geoanchor(self, lat_attr, lng_attr, lat, lng):
-        assert(sphinxapi.VER_COMMAND_SEARCH >= 0x113, "You must upgrade sphinxapi to version 1.19 to use Geo Anchoring.")
+        assert(sphinxapi.VER_COMMAND_SEARCH >= 0x113, "You must upgrade sphinxapi to version 0.98 to use Geo Anchoring.")
         return self._clone(_anchor=(lat_attr, lng_attr, float(lat), float(lng)))
 
     def on_index(self, index):
@@ -265,13 +269,13 @@ class SphinxQuerySet(object):
 
     # only works on attributes
     def exclude(self, **kwargs):
-        filters = self._excludes.copy()
+        filters = self._filters.copy()
         for k,v in kwargs.iteritems():
-            if not isinstance(v, list):
-                v = [v,]
-            v = [isinstance(value, bool) and value and 1 or 0 or int(value) for value in v]
-            filters.setdefault(k, []).append(v)
-
+            if hasattr(v, 'next'):
+                v = list(v)
+            elif not (isinstance(v, list) or isinstance(v, tuple)):
+                 v = [v,]
+            filters.setdefault(k, []).extend(map(to_sphinx, v))
         return self._clone(_excludes=filters)
 
     # you cannot order by @weight (it always orders in descending)
@@ -343,17 +347,18 @@ class SphinxQuerySet(object):
         if self._sort:
             client.SetSortMode(*self._sort)
         
-        if isinstance(self._weights, list) or isinstance(self._weights, tuple):
-            client.SetWeights(self._weights)
-        else:
-            # assume its a dict
+        if isinstance(self._weights, dict):
             client.SetFieldWeights(self._weights)
+        else:
+            # assume its a list
+            client.SetWeights(self._weights)
         
         client.SetMatchMode(self._mode)
 
-        if hasattr(client, 'ResetFilter'):
-                    # TODO: convince Sphinx guy to change this ugliness
-                    client.ResetFilter()
+        # if hasattr(client, 'ResetFilters'):
+        #     # TODO: convince Sphinx guy to change this ugliness
+        #     client.ResetFilters()
+        #     client.ResetGroupBy()
         
         def _handle_filters(filter_list, exclude=False):
             for name, values in filter_list.iteritems():
@@ -496,7 +501,7 @@ class SphinxInstanceManager(object):
         self._index = index
         
     def update(self, **kwargs):
-        assert(sphinxapi.VER_COMMAND_SEARCH >= 0x113, "You must upgrade sphinxapi to version 1.19 to use Geo Anchoring.")
+        assert(sphinxapi.VER_COMMAND_SEARCH >= 0x113, "You must upgrade sphinxapi to version 0.98 to use Geo Anchoring.")
         sphinxapi.UpdateAttributes(index, kwargs.keys(), dict(self.instance.pk, map(to_sphinx, kwargs.values())))
 
 
