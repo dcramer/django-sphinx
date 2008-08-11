@@ -4,9 +4,10 @@ import time
 import struct
 import decimal
 import warnings
+import operator
 import apis.current as sphinxapi
 
-from django.db.models.query import QuerySet
+from django.db.models.query import QuerySet, Q
 from django.conf import settings
 
 __all__ = ('SearchError', 'ConnectionError', 'SphinxSearch', 'SphinxRelation')
@@ -158,13 +159,12 @@ def to_sphinx(value):
     return int(value)
 
 class SphinxQuerySet(object):
-    available_kwargs = ('rankmode', 'mode', 'weights', 'id_query')
+    available_kwargs = ('rankmode', 'mode', 'weights')
     
     def __init__(self, model=None, **kwargs):
         self._select_related        = False
         self._select_related_args   = {}
         self._select_related_fields = []
-        self._id_query              = []
         self._filters               = {}
         self._excludes              = {}
         self._extra                 = {}
@@ -430,28 +430,33 @@ class SphinxQuerySet(object):
 
     def _get_results(self):
         results = self._get_sphinx_results()
-        if not results: return []
-        if results['matches'] and self._model:
-            qs = self._model.objects
-            if self._id_query:
-                pk = '_sphinx_id'
-                # the id_query can be useful in instances where you have composite pks
-                qs = qs.extra(select={'_sphinx_id': self._id_query}, where=['%s IN (%s)' % (self._id_query, ', '.join(['%s' for n in results['matches']]),)], params=[r['id'] for r in results['matches']])
-            else:
-                qs = qs.filter(pk__in=[r['id'] for r in results['matches']])
-                pk = 'id'
+        if not results or not results['matches']:
+            results = []
+        elif self._model:
+            queryset = self._model.objects.all()
             if self._select_related:
-                qs = qs.select_related(*self._select_related_fields, **self._select_related_args)
+                queryset = queryset.select_related(*self._select_related_fields, **self._select_related_args)
             if self._extra:
-                qs = qs.extra(**self._extra)
-            queryset = dict([(getattr(o, pk), o) for o in qs])
+                queryset = queryset.extra(**self._extra)
+            pks = getattr(self._model._meta, 'pks', None)
+            if pks is None or len(pks) == 1:
+                queryset = queryset.filter(pk__in=[r['id'] for r in results['matches']])
+                queryset = dict([(o.pk, o) for o in queryset])
+            else:
+                for r in results['matches']:
+                    r['id'] = ', '.join([unicode(r['attrs'][p.column]) for p in pks])
+                q = reduce(operator.or_, [reduce(operator.and_, [Q(**{p.name: r['attrs'][p.column]}) for p in pks]) for r in results['matches']])
+                queryset = queryset.filter(q)
+                queryset = dict([(', '.join([unicode(p) for p in o.pks]), o) for o in queryset])
+        
+            print queryset
             self.__metadata = {
                 'total': results['total'],
                 'total_found': results['total_found'],
                 'words': results['words'],
             }
             results = [SphinxProxy(queryset[r['id']], r) for r in results['matches'] if r['id'] in queryset]
-        elif results['matches']:
+        else:
             "We did a query without a model, lets see if there's a content_type"
             results['attrs'] = dict(results['attrs'])
             if 'content_type' in results['attrs']:
@@ -463,14 +468,12 @@ class SphinxQuerySet(object):
                         objcache[ct] = {}
                     objcache[ct][r['id']] = None
                 for ct in objcache:
-                    qs = ContentType.objects.get(pk=ct).model_class().objects.filter(pk__in=objcache[ct])
-                    for o in qs:
+                    queryset = ContentType.objects.get(pk=ct).model_class().objects.filter(pk__in=objcache[ct])
+                    for o in queryset:
                         objcache[ct][o.id] = o
                 results = [objcache[r['attrs']['content_type']][r['id']] for r in results['matches']]
             else:
                 results = results['matches']
-        else:
-            results = []
         self._result_cache = results
         return results
 
