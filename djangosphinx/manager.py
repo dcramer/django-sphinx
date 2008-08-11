@@ -446,16 +446,21 @@ class SphinxQuerySet(object):
                 for r in results['matches']:
                     r['id'] = ', '.join([unicode(r['attrs'][p.column]) for p in pks])
                 q = reduce(operator.or_, [reduce(operator.and_, [Q(**{p.name: r['attrs'][p.column]}) for p in pks]) for r in results['matches']])
-                queryset = queryset.filter(q)
-                queryset = dict([(', '.join([unicode(p) for p in o.pks]), o) for o in queryset])
+                if q:
+                    queryset = queryset.filter(q)
+                    queryset = dict([(', '.join([unicode(p) for p in o.pks]), o) for o in queryset])
+                else:
+                    queryset = None
         
-            print queryset
-            self.__metadata = {
-                'total': results['total'],
-                'total_found': results['total_found'],
-                'words': results['words'],
-            }
-            results = [SphinxProxy(queryset[r['id']], r) for r in results['matches'] if r['id'] in queryset]
+            if queryset:
+                self.__metadata = {
+                    'total': results['total'],
+                    'total_found': results['total_found'],
+                    'words': results['words'],
+                }
+                results = [SphinxProxy(queryset[r['id']], r) for r in results['matches'] if r['id'] in queryset]
+            else:
+                results = []
         else:
             "We did a query without a model, lets see if there's a content_type"
             results['attrs'] = dict(results['attrs'])
