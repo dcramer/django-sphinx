@@ -158,12 +158,13 @@ def to_sphinx(value):
     return int(value)
 
 class SphinxQuerySet(object):
-    available_kwargs = ('rankmode', 'mode', 'weights')
+    available_kwargs = ('rankmode', 'mode', 'weights', 'id_query')
     
     def __init__(self, model=None, **kwargs):
         self._select_related        = False
         self._select_related_args   = {}
         self._select_related_fields = []
+        self._id_query              = []
         self._filters               = {}
         self._excludes              = {}
         self._extra                 = {}
@@ -431,18 +432,25 @@ class SphinxQuerySet(object):
         results = self._get_sphinx_results()
         if not results: return []
         if results['matches'] and self._model:
-            qs = self._model.objects.filter(pk__in=[r['id'] for r in results['matches']])
+            qs = self._model.objects
+            if self._id_query:
+                pk = '_sphinx_id'
+                # the id_query can be useful in instances where you have composite pks
+                qs = qs.extra(select={'_sphinx_id': self._id_query}, where=['%s IN (%s)' % (self._id_query, ', '.join(['%s' for n in results['matches']]),)], params=[r['id'] for r in results['matches']])
+            else:
+                qs = qs.filter(pk__in=[r['id'] for r in results['matches']])
+                pk = 'id'
             if self._select_related:
                 qs = qs.select_related(*self._select_related_fields, **self._select_related_args)
             if self._extra:
                 qs = qs.extra(**self._extra)
-            queryset = dict([(o.id, o) for o in qs])
+            queryset = dict([(getattr(o, pk), o) for o in qs])
             self.__metadata = {
                 'total': results['total'],
                 'total_found': results['total_found'],
                 'words': results['words'],
             }
-            results = [SphinxProxy(queryset[k['id']], k) for k in results['matches'] if k['id'] in queryset]
+            results = [SphinxProxy(queryset[r['id']], r) for r in results['matches'] if r['id'] in queryset]
         elif results['matches']:
             "We did a query without a model, lets see if there's a content_type"
             results['attrs'] = dict(results['attrs'])
