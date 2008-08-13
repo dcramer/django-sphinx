@@ -159,7 +159,7 @@ def to_sphinx(value):
     return int(value)
 
 class SphinxQuerySet(object):
-    available_kwargs = ('rankmode', 'mode', 'weights')
+    available_kwargs = ('rankmode', 'mode', 'weights', 'maxmatches')
     
     def __init__(self, model=None, **kwargs):
         self._select_related        = False
@@ -184,9 +184,7 @@ class SphinxQuerySet(object):
         self._model                 = model
         self._anchor                = {}
         
-        for key in self.available_kwargs:
-            if key in kwargs:
-                setattr(self, '_%s' % (key,), kwargs[key])
+        self.set_options(**kwargs)
 
         if model:
             self._index             = kwargs.get('index', model._meta.db_table)
@@ -229,20 +227,35 @@ class SphinxQuerySet(object):
         else:
             return self._result_cache[k]
 
-    def rank_none(self):
-        return self._clone(_rankmode=sphinxapi.SPH_RANK_NONE)
+    def set_options(self, **kwargs):
+        if 'rankmode' in kwargs:
+            if kwargs.get('rankmode') is None:
+                kwargs['rankmode'] = sphinxapi.SPH_RANK_NONE
+        for key in self.available_kwargs:
+            if key in kwargs:
+                setattr(self, '_%s' % (key,), kwargs[key])
 
     def query(self, string):
         return self._clone(_query=unicode(string).encode('utf-8'))
 
-    def mode(self, mode):
-        return self._clone(_mode=mode)
-
     def group_by(self, attribute, func, groupsort='@group desc'):
         return self._clone(_groupby=attribute, _groupfunc=func, _groupsort=groupsort)
 
+    def rank_none(self):
+        warnings.warn('`rank_none()` is deprecated. Use `set_options(rankmode=None)` instead.', DeprecationWarning)
+        return self._clone(_rankmode=sphinxapi.SPH_RANK_NONE)
+
+    def mode(self, mode):
+        warnings.warn('`mode()` is deprecated. Use `set_options(mode='')` instead.', DeprecationWarning)
+        return self._clone(_mode=mode)
+
     def weights(self, weights):
+        warnings.warn('`mode()` is deprecated. Use `set_options(weights=[])` instead.', DeprecationWarning)
         return self._clone(_weights=weights)
+
+    def on_index(self, index):
+        warnings.warn('`mode()` is deprecated. Use `set_options(on_index=foo)` instead.', DeprecationWarning)
+        return self._clone(_index=index)
 
     # only works on attributes
     def filter(self, **kwargs):
@@ -258,9 +271,6 @@ class SphinxQuerySet(object):
     def geoanchor(self, lat_attr, lng_attr, lat, lng):
         assert(sphinxapi.VER_COMMAND_SEARCH >= 0x113, "You must upgrade sphinxapi to version 0.98 to use Geo Anchoring.")
         return self._clone(_anchor=(lat_attr, lng_attr, float(lat), float(lng)))
-
-    def on_index(self, index):
-        return self._clone(_index=index)
 
     # this actually does nothing, its just a passthru to
     # keep things looking/working generally the same
@@ -341,6 +351,8 @@ class SphinxQuerySet(object):
         return self._result_cache
 
     def _get_sphinx_results(self):
+        assert(self._offset + self._limit <= self._maxmatches)
+
         client = sphinxapi.SphinxClient()
         client.SetServer(SPHINX_SERVER, SPHINX_PORT)
 
@@ -417,10 +429,9 @@ class SphinxQuerySet(object):
 
         if sphinxapi.VER_COMMAND_SEARCH >= 0x113:
             client.SetRetries(SPHINX_RETRIES, SPHINX_RETRIES_DELAY)
-            client.SetLimits(self._offset, self._limit, max(self._offset + self._limit, self._maxmatches), self._offset + self._limit)
-        else:
-            client.SetLimits(self._offset, self._limit, max(self._offset + self._limit, self._maxmatches))
-            
+        
+        client.SetLimits(self._offset, self._limit, self._maxmatches)
+        
         results = client.Query(self._query, self._index)
         
         # The Sphinx API doesn't raise exceptions
