@@ -414,15 +414,13 @@ class SphinxQuerySet(object):
             # Fix for Sphinx throwing an assertion error when you pass it an empty limiter
             return []
         
-        maxmatches = max(self._offset + self._limit, self._maxmatches)
+
         if sphinxapi.VER_COMMAND_SEARCH >= 0x113:
-            # We can set the cutoff value here to increase performance
-            client.SetLimits(self._offset, self._limit, maxmatches, maxmatches)
             client.SetRetries(SPHINX_RETRIES, SPHINX_RETRIES_DELAY)
+            client.SetLimits(self._offset, self._limit, max(self._offset + self._limit, self._maxmatches), self._offset + self._limit)
         else:
-            client.SetLimits(self._offset, self._limit, maxmatches)
+            client.SetLimits(self._offset, self._limit, max(self._offset + self._limit, self._maxmatches))
             
-        
         results = client.Query(self._query, self._index)
         
         # The Sphinx API doesn't raise exceptions
