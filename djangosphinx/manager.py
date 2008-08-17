@@ -367,10 +367,11 @@ class SphinxQuerySet(object):
         
         client.SetMatchMode(self._mode)
 
-        # if hasattr(client, 'ResetFilters'):
-        #     # TODO: convince Sphinx guy to change this ugliness
-        #     client.ResetFilters()
-        #     client.ResetGroupBy()
+        # 0.97 requires you to reset it
+        if hasattr(client, 'ResetFilters'):
+             client.ResetFilters()
+        if hasattr(client, 'ResetGroupBy'):
+             client.ResetGroupBy()
         
         def _handle_filters(filter_list, exclude=False):
             for name, values in filter_list.iteritems():
