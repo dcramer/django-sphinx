@@ -564,7 +564,7 @@ class SphinxSearch(object):
 
 class SphinxRelationProxy(SphinxProxy):
     def count(self):
-        return self._sphinx['attrs']['@count']
+        return min(self._sphinx['attrs']['@count'], self._maxmatches)
     
 class SphinxRelation(SphinxSearch):
     """
