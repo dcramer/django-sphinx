@@ -279,7 +279,7 @@ class SphinxQuerySet(object):
 
     # only works on attributes
     def exclude(self, **kwargs):
-        filters = self._filters.copy()
+        filters = self._excludes.copy()
         for k,v in kwargs.iteritems():
             if hasattr(v, 'next'):
                 v = list(v)
@@ -412,7 +412,7 @@ class SphinxQuerySet(object):
 
         # Exclude filters
         if self._excludes:
-            _handle_filters(self.self._excludes, True)
+            _handle_filters(self._excludes, True)
         
         if self._groupby:
             client.SetGroupBy(self._groupby, self._groupfunc, self._groupsort)
@@ -596,6 +596,7 @@ class SphinxRelation(SphinxSearch):
         self._index = instance._index
         self._query = instance._query
         self._filters = instance._filters
+        self._excludes = instance._excludes
         self._model = self._related_model
         self._groupby = self._related_attr
         self._groupsort = self._related_sort
