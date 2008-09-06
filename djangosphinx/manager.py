@@ -323,7 +323,7 @@ class SphinxQuerySet(object):
         return self._clone(_extra=extra)
 
     def count(self):
-        return self._get_sphinx_results()['total_found']
+        return min(self._get_sphinx_results()['total_found'], self._maxmatches)
 
     def reset(self):
         return self.__class__(self._model, self._index)
