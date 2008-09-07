@@ -2,10 +2,14 @@ import select
 import socket
 import time
 import struct
-import decimal
 import warnings
 import operator
 import apis.current as sphinxapi
+
+try:
+    import decimal
+except ImportError:
+    from django.utils import _decimal as decimal # for Python 2.3
 
 from django.db.models.query import QuerySet, Q
 from django.conf import settings
