@@ -92,7 +92,10 @@ def generate_source_for_model(model_class, index=None, sphinx_params={}):
     
     valid_fields = [f for f in model_class._meta.fields if _is_sourcable_field(f)]
     
-    if model_class._meta.pk not in valid_fields:
+    # Hackish solution for a bug I've introduced into composite pks branch
+    pk = model_class._meta.get_field(model_class._meta.pk.name)
+    
+    if pk not in valid_fields:
         valid_fields.insert(0, model_class._meta.pk)
     
     if index is None:
@@ -104,7 +107,7 @@ def generate_source_for_model(model_class, index=None, sphinx_params={}):
         'source_name': index,
         'index_name': index,
         'table_name': index,
-        'primary_key': model_class._meta.pk.column,
+        'primary_key': pk.column,
         'field_names': [f.column for f in valid_fields],
         'group_columns': [f.column for f in valid_fields if (f.rel or isinstance(f, models.BooleanField) or isinstance(f, models.IntegerField)) and not f.primary_key],
         'date_columns': [f.column for f in valid_fields if isinstance(f, models.DateTimeField) or isinstance(f, models.DateField)],
