@@ -187,6 +187,7 @@ class SphinxQuerySet(object):
         self._rankmode              = getattr(sphinxapi, 'SPH_RANK_PROXIMITY_BM25', None)
         self._model                 = model
         self._anchor                = {}
+        self.__metadata             = {}
         
         self.set_options(**kwargs)
 
@@ -327,7 +328,7 @@ class SphinxQuerySet(object):
         return self._clone(_extra=extra)
 
     def count(self):
-        return min(self._get_sphinx_results()['total_found'], self._maxmatches)
+        return min(self._sphinx.get('total_found', 0), self._maxmatches)
 
     def reset(self):
         return self.__class__(self._model, self._index)
