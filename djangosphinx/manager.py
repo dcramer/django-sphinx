@@ -223,11 +223,11 @@ class SphinxQuerySet(object):
                 self._result_cache = None
         if self._result_cache is None:
             if type(k) == slice:
-                self._offset = int(k.start)
-                self._limit = int(k.stop-k.start)
+                self._offset = k.start
+                self._limit = k.stop-k.start
                 return self._get_results()
             else:
-                self._offset = int(k)
+                self._offset = k
                 self._limit = 1
                 return self._get_results()[0]
         else:
@@ -437,7 +437,7 @@ class SphinxQuerySet(object):
         if sphinxapi.VER_COMMAND_SEARCH >= 0x113:
             client.SetRetries(SPHINX_RETRIES, SPHINX_RETRIES_DELAY)
         
-        client.SetLimits(self._offset, self._limit, self._maxmatches)
+        client.SetLimits(int(self._offset), int(self._limit), int(self._maxmatches))
         
         results = client.Query(self._query, self._index)
         
