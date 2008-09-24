@@ -119,7 +119,8 @@ class SphinxProxy(object):
     __ge__ = lambda x, o: x.__current_object >= o
     __cmp__ = lambda x, o: cmp(x.__current_object, o)
     __hash__ = lambda x: hash(x.__current_object)
-    __call__ = lambda x, *a, **kw: x.__current_object(*a, **kw)
+    # attributes are currently not callable
+    # __call__ = lambda x, *a, **kw: x.__current_object(*a, **kw)
     __len__ = lambda x: len(x.__current_object)
     __getitem__ = lambda x, i: x.__current_object[i]
     __iter__ = lambda x: iter(x.__current_object)
