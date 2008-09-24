@@ -21,11 +21,11 @@ from datetime import datetime, date
 
 # server settings
 SPHINX_SERVER           = getattr(settings, 'SPHINX_SERVER', 'localhost')
-SPHINX_PORT             = getattr(settings, 'SPHINX_PORT', 3312)
+SPHINX_PORT             = int(getattr(settings, 'SPHINX_PORT', 3312))
 
 # These require search API 275 (Sphinx 0.9.8)
-SPHINX_RETRIES          = getattr(settings, 'SPHINX_RETRIES', 0)
-SPHINX_RETRIES_DELAY    = getattr(settings, 'SPHINX_RETRIES_DELAY', 5)
+SPHINX_RETRIES          = int(getattr(settings, 'SPHINX_RETRIES', 0))
+SPHINX_RETRIES_DELAY    = int(getattr(settings, 'SPHINX_RETRIES_DELAY', 5))
 
 MAX_INT = int(2**31-1)
 
@@ -210,7 +210,7 @@ class SphinxQuerySet(object):
         return iter(self._get_data())
     
     def __getitem__(self, k):
-        if not isinstance(k, (slice, int)):
+        if not isinstance(k, (slice, int, long)):
             raise TypeError
         assert (not isinstance(k, slice) and (k >= 0)) \
             or (isinstance(k, slice) and (k.start is None or k.start >= 0) and (k.stop is None or k.stop >= 0)), \
@@ -223,11 +223,11 @@ class SphinxQuerySet(object):
                 self._result_cache = None
         if self._result_cache is None:
             if type(k) == slice:
-                self._offset = k.start
-                self._limit = k.stop-k.start
+                self._offset = int(k.start)
+                self._limit = int(k.stop-k.start)
                 return self._get_results()
             else:
-                self._offset = k
+                self._offset = int(k)
                 self._limit = 1
                 return self._get_results()[0]
         else:
@@ -369,7 +369,7 @@ class SphinxQuerySet(object):
             client.SetFieldWeights(self._weights)
         else:
             # assume its a list
-            client.SetWeights(self._weights)
+            client.SetWeights(map(int, self._weights))
         
         client.SetMatchMode(self._mode)
 
@@ -616,7 +616,7 @@ class SphinxRelation(SphinxSearch):
             ids = []
             for r in results['matches']:
                 value = r['attrs']['@groupby']
-                if isinstance(value, int):
+                if isinstance(value, (int, long)):
                     ids.append(value)
                 else:
                     ids.extend()
