@@ -484,6 +484,11 @@ class SphinxQuerySet(object):
                 results = []
         else:
             "We did a query without a model, lets see if there's a content_type"
+            self.__metadata = {
+                'total': results['total'],
+                'total_found': results['total_found'],
+                'words': results['words'],
+            }
             results['attrs'] = dict(results['attrs'])
             if 'content_type' in results['attrs']:
                 "Now we have to do one query per content_type"
