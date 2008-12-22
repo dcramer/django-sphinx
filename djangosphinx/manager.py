@@ -5,7 +5,7 @@ import struct
 import warnings
 import operator
 import apis.current as sphinxapi
-
+import logging
 try:
     import decimal
 except ImportError:
@@ -35,9 +35,12 @@ class ConnectionError(Exception): pass
 class SphinxProxy(object):
     """
     Acts exactly like a normal instance of an object except that
-    it will handle any special sphinx attributes in a _sphinx class.
+    it will handle any special sphinx attributes in a `_sphinx` class.
+    
+    If there is no `sphinx` attribute on the instance, it will also
+    add a proxy wrapper to `_sphinx` under that name as well.
     """
-    __slots__ = ('__dict__', '__instance__', '_sphinx')
+    __slots__ = ('__dict__', '__instance__', '_sphinx', 'sphinx')
 
     def __init__(self, instance, attributes):
         object.__setattr__(self, '__instance__', instance)
@@ -89,11 +92,17 @@ class SphinxProxy(object):
             return dir(self.__current_object)
         elif name == '_sphinx':
             return object.__getattr__(self, '_sphinx', value)
+        elif name == 'sphinx':
+            if not hasattr(self.__current_object, 'sphinx'):
+                return object.__getattr__(self, '_sphinx', value)
         return getattr(self.__current_object, name)
 
     def __setattr__(self, name, value):
         if name == '_sphinx':
             return object.__setattr__(self, '_sphinx', value)
+        elif name == 'sphinx':
+            if not hasattr(self.__current_object, 'sphinx'):
+                return object.__setattr__(self, '_sphinx', value)
         return setattr(self.__current_object, name, value)
 
     def __setitem__(self, key, value):
@@ -164,9 +173,10 @@ def to_sphinx(value):
     return int(value)
 
 class SphinxQuerySet(object):
-    available_kwargs = ('rankmode', 'mode', 'weights', 'maxmatches')
+    available_kwargs = ('rankmode', 'mode', 'weights', 'maxmatches', 'passages', 'passages_opts')
     
     def __init__(self, model=None, **kwargs):
+        self._client                = None
         self._select_related        = False
         self._select_related_args   = {}
         self._select_related_fields = []
@@ -182,6 +192,8 @@ class SphinxQuerySet(object):
         self._sort                  = None
         self._weights               = [1, 100]
 
+        self._passages              = False
+        self._passages_opts         = {}
         self._maxmatches            = 1000
         self._result_cache          = None
         self._mode                  = sphinxapi.SPH_MATCH_ALL
@@ -221,17 +233,14 @@ class SphinxQuerySet(object):
         else:
             if k not in range(self._offset, self._limit+self._offset):
                 self._result_cache = None
-        if self._result_cache is None:
-            if type(k) == slice:
-                self._offset = k.start
-                self._limit = k.stop-k.start
-                return self._get_results()
-            else:
-                self._offset = k
-                self._limit = 1
-                return self._get_results()[0]
+        if type(k) == slice:
+            self._offset = k.start
+            self._limit = k.stop-k.start
+            return self._get_data()
         else:
-            return self._result_cache[k]
+            self._offset = k
+            self._limit = 1
+            return self._get_data()[0]
 
     def set_options(self, **kwargs):
         if 'rankmode' in kwargs:
@@ -335,6 +344,13 @@ class SphinxQuerySet(object):
         return self.__class__(self._model, self._index)
 
     # Internal methods
+    def _get_sphinx_client(self):
+        if not self._client:
+            self._client = sphinxapi.SphinxClient()
+            self._client.SetServer(SPHINX_SERVER, SPHINX_PORT)
+        return self._client
+
+
     def _clone(self, **kwargs):
         # Clones the queryset passing any changed args
         c = self.__class__()
@@ -359,8 +375,7 @@ class SphinxQuerySet(object):
     def _get_sphinx_results(self):
         assert(self._offset + self._limit <= self._maxmatches)
 
-        client = sphinxapi.SphinxClient()
-        client.SetServer(SPHINX_SERVER, SPHINX_PORT)
+        client = self._get_sphinx_client()
 
         if self._sort:
             client.SetSortMode(*self._sort)
@@ -447,6 +462,9 @@ class SphinxQuerySet(object):
                 raise SearchError, client.GetLastError()
             elif client.GetLastWarning():
                 raise SearchError, client.GetLastWarning()
+        else:
+            logging.debug('Found %s results for search query %s', results['total'], self._query)
+        
         return results
 
     def _get_results(self):
@@ -479,6 +497,14 @@ class SphinxQuerySet(object):
                     'total_found': results['total_found'],
                     'words': results['words'],
                 }
+
+                if self._passages:
+                    fields = results['fields']
+                    words = ' '.join([w['word'] for w in results['words']])
+                    for r in results['matches']:
+                        if r['id'] in queryset:
+                            r['passages'] = self._get_passages(queryset[r['id']], fields, words)
+                
                 results = [SphinxProxy(queryset[r['id']], r) for r in results['matches'] if r['id'] in queryset]
             else:
                 results = []
@@ -507,6 +533,21 @@ class SphinxQuerySet(object):
                 results = results['matches']
         self._result_cache = results
         return results
+
+    def _get_passages(self, instance, fields, words):
+        client = self._get_sphinx_client()
+        docs = [getattr(instance, f) for f in fields]
+        if type(self._passages_opts) == dict:
+            opts = self._passages_opts
+        else:
+            opts = {}
+        passages_list = client.BuildExcerpts(docs, self._index, words, opts)
+        
+        passages = {}
+        c = 0
+        for f in fields:
+            passages[f] = passages_list[c]
+        return passages
 
 class SphinxModelManager(object):
     def __init__(self, model, **kwargs):
