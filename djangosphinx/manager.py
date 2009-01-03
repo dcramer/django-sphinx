@@ -202,7 +202,9 @@ class SphinxQuerySet(object):
         self._anchor                = {}
         self.__metadata             = {}
         
-        self.set_options(**kwargs)
+        options = self._format_options(**kwargs)
+        for key, value in options.iteritems():
+            setattr(self, key, value)
 
         if model:
             self._index             = kwargs.get('index', model._meta.db_table)
@@ -242,13 +244,16 @@ class SphinxQuerySet(object):
             self._limit = 1
             return self._get_data()[0]
 
-    def set_options(self, **kwargs):
+    def _format_options(self, **kwargs):
         if 'rankmode' in kwargs:
             if kwargs.get('rankmode') is None:
                 kwargs['rankmode'] = sphinxapi.SPH_RANK_NONE
-        for key in self.available_kwargs:
-            if key in kwargs:
-                setattr(self, '_%s' % (key,), kwargs[key])
+        kwargs = dict([('_%s' % (key,), value) for key, value in kwargs.iteritems() if key in self.available_kwargs])
+        return kwargs
+
+    def set_options(self, **kwargs):
+        kwargs = self._format_options(**kwargs)
+        return self._clone(**kwargs)
 
     def query(self, string):
         return self._clone(_query=unicode(string).encode('utf-8'))
@@ -354,7 +359,7 @@ class SphinxQuerySet(object):
     def _clone(self, **kwargs):
         # Clones the queryset passing any changed args
         c = self.__class__()
-        c.__dict__.update(self.__dict__)
+        c.__dict__.update(self.__dict__.copy())
         c.__dict__.update(kwargs)
         return c
     
