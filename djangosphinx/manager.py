@@ -87,14 +87,20 @@ class SphinxProxy(object):
         except RuntimeError:
             return []
 
-    def __getattr__(self, name, value=None):
-        if name == '__members__':
-            return dir(self.__current_object)
-        elif name == '_sphinx':
-            return object.__getattr__(self, '_sphinx', value)
+    def __getattribute__(self, name):
+        if name == '_sphinx':
+            return super(SphinxProxy, self).__getattribute__('_sphinx')
         elif name == 'sphinx':
             if not hasattr(self.__current_object, 'sphinx'):
-                return object.__getattr__(self, '_sphinx', value)
+                return super(SphinxProxy, self).__getattribute__('_sphinx')
+        return getattr(self.__current_object, name)        
+
+    def __getattr__(self, name, value=None):
+        if name == '_sphinx':
+            return super(SphinxProxy, self).__getattr__('_sphinx', value)
+        elif name == 'sphinx':
+            if not hasattr(self.__current_object, 'sphinx'):
+                return super(SphinxProxy, self).__getattr__('_sphinx', value)
         return getattr(self.__current_object, name)
 
     def __setattr__(self, name, value):
@@ -360,7 +366,8 @@ class SphinxQuerySet(object):
         # Clones the queryset passing any changed args
         c = self.__class__()
         c.__dict__.update(self.__dict__.copy())
-        c.__dict__.update(kwargs)
+        for k, v in kwargs.iteritems():
+            setattr(c, k, v)
         return c
     
     def _sphinx(self):
@@ -552,6 +559,7 @@ class SphinxQuerySet(object):
         c = 0
         for f in fields:
             passages[f] = passages_list[c]
+            c += 1
         return passages
 
 class SphinxModelManager(object):
