@@ -456,7 +456,6 @@ class SphinxQuerySet(object):
                     else:
                         raise NotImplementedError, 'Related object and/or field lookup "%s" not supported' % lookup
                     if is_float:
-                        print args
                         client.SetFilterFloatRange(*args)
                     elif not exclude and self._model and name == self._model._meta.pk.column:
                         client.SetIDRange(*args[1:3])
