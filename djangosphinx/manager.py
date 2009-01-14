@@ -513,27 +513,27 @@ class SphinxQuerySet(object):
             words = ' '.join([w['word'] for w in results['words']])
             
         if self._model:
-            queryset = self._model.objects.all()
-            if self._select_related:
-                queryset = queryset.select_related(*self._select_related_fields, **self._select_related_args)
-            if self._extra:
-                queryset = queryset.extra(**self._extra)
+            if results['matches']:
+                queryset = self._model.objects.all()
+                if self._select_related:
+                    queryset = queryset.select_related(*self._select_related_fields, **self._select_related_args)
+                if self._extra:
+                    queryset = queryset.extra(**self._extra)
 
-            # django-sphinx supports the compositepks branch
-            # as well as custom id columns in your sphinx configuration
-            # but all primary key columns still need to be present in the field list
-            pks = getattr(self._model._meta, 'pks', [self._model._meta.pk])
-            for r in results['matches']:
-                r['id'] = ', '.join([unicode(r['attrs'][p.column]) for p in pks])
+                # django-sphinx supports the compositepks branch
+                # as well as custom id columns in your sphinx configuration
+                # but all primary key columns still need to be present in the field list
+                pks = getattr(self._model._meta, 'pks', [self._model._meta.pk])
+                for r in results['matches']:
+                    r['id'] = ', '.join([unicode(r['attrs'][p.column]) for p in pks])
             
-            # Join our Q objects to get a where clause which
-            # matches all primary keys, even across multiple columns
-            q = reduce(operator.or_, [reduce(operator.and_, [Q(**{p.name: r['attrs'][p.column]}) for p in pks]) for r in results['matches']])
+                # Join our Q objects to get a where clause which
+                # matches all primary keys, even across multiple columns
+                q = reduce(operator.or_, [reduce(operator.and_, [Q(**{p.name: r['attrs'][p.column]}) for p in pks]) for r in results['matches']])
             
-            queryset = queryset.filter(q)
-            queryset = dict([(', '.join([unicode(p) for p in o.pks]), o) for o in queryset])
-            
-            if queryset:
+                queryset = queryset.filter(q)
+                queryset = dict([(', '.join([unicode(p) for p in o.pks]), o) for o in queryset])
+
                 if self._passages:
                     # TODO: clean this up
                     for r in results['matches']:
