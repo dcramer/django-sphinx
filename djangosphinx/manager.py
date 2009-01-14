@@ -429,21 +429,34 @@ class SphinxQuerySet(object):
                     # The float handling for __gt and __lt is kind of ugly..
                     name, lookup = name.split('__', 1)
                     is_float = isinstance(values[0], float)
-                    if lookup == 'gt':
-                        value = is_float and values[0] + (1.0/MAX_INT) or values[0] - 1
-                        args = (name, value, MAX_INT, exclude)
-                    elif lookup == 'gte':
-                        args = (name, values[0], MAX_INT, exclude)
-                    elif lookup == 'lt':
-                        value = is_float and values[0] - (1.0/MAX_INT) or values[0] - 1
-                        args = (name, -MAX_INT, value, exclude)
-                    elif lookup == 'lte':
-                        args = (name, -MAX_INT, values[0], exclude)
+                    if lookup in ('gt', 'gte'):
+                        value = values[0]
+                        if lookup == 'gt':
+                            if is_float:
+                                value += (1.0/MAX_INT)
+                            else:
+                                value += 1
+                        _max = MAX_INT
+                        if is_float:
+                            _max = float(_max)
+                        args = (name, value, _max, exclude)
+                    elif lookup in ('lt', 'lte'):
+                        value = values[0]
+                        if lookup == 'lt':
+                            if is_float:
+                                value -= (1.0/MAX_INT)
+                            else:
+                                value -= 1
+                        _max = -MAX_INT
+                        if is_float:
+                            _max = float(_max)
+                        args = (name, _max, value, exclude)
                     elif lookup == 'range':
                         args = (name, values[0], values[1], exclude)
                     else:
                         raise NotImplementedError, 'Related object and/or field lookup "%s" not supported' % lookup
                     if is_float:
+                        print args
                         client.SetFilterFloatRange(*args)
                     elif not exclude and self._model and name == self._model._meta.pk.column:
                         client.SetIDRange(*args[1:3])
@@ -559,7 +572,7 @@ class SphinxQuerySet(object):
                         if r['attrs']['content_type'] == ct:
                             val = ', '.join([unicode(r['attrs'][p.column]) for p in pks])
                             objcache[ct][r['id']] = r['id'] = val
-                            
+                    
                     q = reduce(operator.or_, [reduce(operator.and_, [Q(**{p.name: r['attrs'][p.column]}) for p in pks]) for r in results['matches'] if r['attrs']['content_type'] == ct])
                     queryset = model_class.objects.filter(q)
                     for o in queryset:
@@ -578,7 +591,7 @@ class SphinxQuerySet(object):
     def _get_passages(self, instance, fields, words):
         client = self._get_sphinx_client()
         docs = [getattr(instance, f) for f in fields]
-        if type(self._passages_opts) == dict:
+        if isinstance(self._passages_opts, dict):
             opts = self._passages_opts
         else:
             opts = {}
