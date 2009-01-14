@@ -29,6 +29,13 @@ SPHINX_RETRIES_DELAY    = int(getattr(settings, 'SPHINX_RETRIES_DELAY', 5))
 
 MAX_INT = int(2**31-1)
 
+EMPTY_RESULT_SET = dict(
+    matches=[],
+    total=0,
+    total_found=0,
+    words=[],
+)
+
 class SearchError(Exception): pass
 class ConnectionError(Exception): pass
 
@@ -53,25 +60,25 @@ class SphinxProxy(object):
         to pass the object into a different context.
         """
         return self.__instance__
-    __current_object = property(_get_current_object)
+    _current_object = property(_get_current_object)
 
     def __dict__(self):
         try:
-            return self.__current_object.__dict__
+            return self._current_object.__dict__
         except RuntimeError:
             return AttributeError('__dict__')
     __dict__ = property(__dict__)
 
     def __repr__(self):
         try:
-            obj = self.__current_object
+            obj = self._current_object
         except RuntimeError:
             return '<%s unbound>' % self.__class__.__name__
         return repr(obj)
 
     def __nonzero__(self):
         try:
-            return bool(self.__current_object)
+            return bool(self._current_object)
         except RuntimeError:
             return False
 
@@ -83,89 +90,88 @@ class SphinxProxy(object):
 
     def __dir__(self):
         try:
-            return dir(self.__current_object)
+            return dir(self._current_object)
         except RuntimeError:
             return []
 
-    def __getattribute__(self, name):
-        if name == '_sphinx':
-            return super(SphinxProxy, self).__getattribute__('_sphinx')
-        elif name == 'sphinx':
-            if not hasattr(self.__current_object, 'sphinx'):
-                return super(SphinxProxy, self).__getattribute__('_sphinx')
-        return getattr(self.__current_object, name)        
+    # def __getattribute__(self, name):
+    #     if not hasattr(self._current_object, 'sphinx') and name == 'sphinx':
+    #         name = '_sphinx'
+    #     if name == '_sphinx':
+    #         return object.__getattribute__(self, name)
+    #     print object.__getattribute__(self, '_current_object')
+    #     return getattr(object.__getattribute__(self, '_current_object'), name)
 
     def __getattr__(self, name, value=None):
+        if not hasattr(self._current_object, 'sphinx') and name == 'sphinx':
+            name = '_sphinx'        
         if name == '_sphinx':
-            return super(SphinxProxy, self).__getattr__('_sphinx', value)
-        elif name == 'sphinx':
-            if not hasattr(self.__current_object, 'sphinx'):
-                return super(SphinxProxy, self).__getattr__('_sphinx', value)
-        return getattr(self.__current_object, name)
+            return getattr(self, '_sphinx', value)
+        return getattr(self._current_object, name, value)
 
     def __setattr__(self, name, value):
         if name == '_sphinx':
             return object.__setattr__(self, '_sphinx', value)
         elif name == 'sphinx':
-            if not hasattr(self.__current_object, 'sphinx'):
+            if not hasattr(self._current_object, 'sphinx'):
                 return object.__setattr__(self, '_sphinx', value)
-        return setattr(self.__current_object, name, value)
+        return setattr(self._current_object, name, value)
 
     def __setitem__(self, key, value):
-        self.__current_object[key] = value
+        self._current_object[key] = value
 
     def __delitem__(self, key):
-        del self.__current_object[key]
+        del self._current_object[key]
 
     def __setslice__(self, i, j, seq):
-        self.__current_object[i:j] = seq
+        self._current_object[i:j] = seq
 
     def __delslice__(self, i, j):
-        del self.__current_object[i:j]
+        del self._current_object[i:j]
 
-    __delattr__ = lambda x, n: delattr(x.__current_object, n)
-    __str__ = lambda x: str(x.__current_object)
-    __unicode__ = lambda x: unicode(x.__current_object)
-    __lt__ = lambda x, o: x.__current_object < o
-    __le__ = lambda x, o: x.__current_object <= o
-    __eq__ = lambda x, o: x.__current_object == o
-    __ne__ = lambda x, o: x.__current_object != o
-    __gt__ = lambda x, o: x.__current_object > o
-    __ge__ = lambda x, o: x.__current_object >= o
-    __cmp__ = lambda x, o: cmp(x.__current_object, o)
-    __hash__ = lambda x: hash(x.__current_object)
+    __delattr__ = lambda x, n: delattr(x._current_object, n)
+    __str__ = lambda x: str(x._current_object)
+    __unicode__ = lambda x: unicode(x._current_object)
+    __lt__ = lambda x, o: x._current_object < o
+    __le__ = lambda x, o: x._current_object <= o
+    __eq__ = lambda x, o: x._current_object == o
+    __ne__ = lambda x, o: x._current_object != o
+    __gt__ = lambda x, o: x._current_object > o
+    __ge__ = lambda x, o: x._current_object >= o
+    __cmp__ = lambda x, o: cmp(x._current_object, o)
+    __hash__ = lambda x: hash(x._current_object)
     # attributes are currently not callable
-    # __call__ = lambda x, *a, **kw: x.__current_object(*a, **kw)
-    __len__ = lambda x: len(x.__current_object)
-    __getitem__ = lambda x, i: x.__current_object[i]
-    __iter__ = lambda x: iter(x.__current_object)
-    __contains__ = lambda x, i: i in x.__current_object
-    __getslice__ = lambda x, i, j: x.__current_object[i:j]
-    __add__ = lambda x, o: x.__current_object + o
-    __sub__ = lambda x, o: x.__current_object - o
-    __mul__ = lambda x, o: x.__current_object * o
-    __floordiv__ = lambda x, o: x.__current_object // o
-    __mod__ = lambda x, o: x.__current_object % o
-    __divmod__ = lambda x, o: x.__current_object.__divmod__(o)
-    __pow__ = lambda x, o: x.__current_object ** o
-    __lshift__ = lambda x, o: x.__current_object << o
-    __rshift__ = lambda x, o: x.__current_object >> o
-    __and__ = lambda x, o: x.__current_object & o
-    __xor__ = lambda x, o: x.__current_object ^ o
-    __or__ = lambda x, o: x.__current_object | o
-    __div__ = lambda x, o: x.__current_object.__div__(o)
-    __truediv__ = lambda x, o: x.__current_object.__truediv__(o)
-    __neg__ = lambda x: -(x.__current_object)
-    __pos__ = lambda x: +(x.__current_object)
-    __abs__ = lambda x: abs(x.__current_object)
-    __invert__ = lambda x: ~(x.__current_object)
-    __complex__ = lambda x: complex(x.__current_object)
-    __int__ = lambda x: int(x.__current_object)
-    __long__ = lambda x: long(x.__current_object)
-    __float__ = lambda x: float(x.__current_object)
-    __oct__ = lambda x: oct(x.__current_object)
-    __hex__ = lambda x: hex(x.__current_object)
-    __index__ = lambda x: x.__current_object.__index__()
+    # __call__ = lambda x, *a, **kw: x._current_object(*a, **kw)
+    __len__ = lambda x: len(x._current_object)
+    __getitem__ = lambda x, i: x._current_object[i]
+    __iter__ = lambda x: iter(x._current_object)
+    __contains__ = lambda x, i: i in x._current_object
+    __getslice__ = lambda x, i, j: x._current_object[i:j]
+    __add__ = lambda x, o: x._current_object + o
+    __sub__ = lambda x, o: x._current_object - o
+    __mul__ = lambda x, o: x._current_object * o
+    __floordiv__ = lambda x, o: x._current_object // o
+    __mod__ = lambda x, o: x._current_object % o
+    __divmod__ = lambda x, o: x._current_object.__divmod__(o)
+    __pow__ = lambda x, o: x._current_object ** o
+    __lshift__ = lambda x, o: x._current_object << o
+    __rshift__ = lambda x, o: x._current_object >> o
+    __and__ = lambda x, o: x._current_object & o
+    __xor__ = lambda x, o: x._current_object ^ o
+    __or__ = lambda x, o: x._current_object | o
+    __div__ = lambda x, o: x._current_object.__div__(o)
+    __truediv__ = lambda x, o: x._current_object.__truediv__(o)
+    __neg__ = lambda x: -(x._current_object)
+    __pos__ = lambda x: +(x._current_object)
+    __abs__ = lambda x: abs(x._current_object)
+    __invert__ = lambda x: ~(x._current_object)
+    __complex__ = lambda x: complex(x._current_object)
+    __int__ = lambda x: int(x._current_object)
+    __long__ = lambda x: long(x._current_object)
+    __float__ = lambda x: float(x._current_object)
+    __oct__ = lambda x: oct(x._current_object)
+    __hex__ = lambda x: hex(x._current_object)
+    __index__ = lambda x: x._current_object.__index__()
     __coerce__ = lambda x, o: x.__coerce__(x, o)
     __enter__ = lambda x: x.__enter__()
     __exit__ = lambda x, *a, **kw: x.__exit__(*a, **kw)
@@ -235,12 +241,20 @@ class SphinxQuerySet(object):
         assert (not isinstance(k, slice) and (k >= 0)) \
             or (isinstance(k, slice) and (k.start is None or k.start >= 0) and (k.stop is None or k.stop >= 0)), \
             "Negative indexing is not supported."
-        if type(k) == slice:
-            if self._offset < k.start or k.stop-k.start > self._limit:
-                self._result_cache = None
-        else:
-            if k not in range(self._offset, self._limit+self._offset):
-                self._result_cache = None
+        if self._result_cache is not None:
+            # Check to see if this is a portion of an already existing result cache
+            if type(k) == slice:
+                start = k.start
+                stop = k.stop-k.start
+                if self._offset < start or stop > self._limit:
+                    self._result_cache = None
+                else:
+                    return self._get_data()[start-self._offset:self._limit-stop]
+            else:
+                if k not in range(self._offset, self._limit+self._offset):
+                    self._result_cache = None
+                else:
+                    return self._get_data()[k-self._offset]
         if type(k) == slice:
             self._offset = k.start
             self._limit = k.stop-k.start
@@ -458,13 +472,16 @@ class SphinxQuerySet(object):
 
         if not self._limit > 0:
             # Fix for Sphinx throwing an assertion error when you pass it an empty limiter
-            return []
+            return EMPTY_RESULT_SET
         
-
         if sphinxapi.VER_COMMAND_SEARCH >= 0x113:
             client.SetRetries(SPHINX_RETRIES, SPHINX_RETRIES_DELAY)
         
         client.SetLimits(int(self._offset), int(self._limit), int(self._maxmatches))
+        
+        # To avoid modifying the Sphinx API, we solve unicode indexes here
+        if isinstance(self._index, unicode):
+            self._index = self._index.encode('utf-8')
         
         results = client.Query(self._query, self._index)
         
@@ -474,6 +491,8 @@ class SphinxQuerySet(object):
                 raise SearchError, client.GetLastError()
             elif client.GetLastWarning():
                 raise SearchError, client.GetLastWarning()
+        elif not results['matches']:
+            return EMPTY_RESULT_SET
         else:
             logging.debug('Found %s results for search query %s', results['total'], self._query)
         
@@ -481,38 +500,42 @@ class SphinxQuerySet(object):
 
     def _get_results(self):
         results = self._get_sphinx_results()
-        if not results or not results['matches']:
-            results = []
-        elif self._model:
+        self.__metadata = {
+            'total': results['total'],
+            'total_found': results['total_found'],
+            'words': results['words'],
+        }
+        if results['matches'] and self._passages:
+            # We need to do some initial work for passages
+            # XXX: The passages implementation has a potential gotcha if your id
+            # column is not actually your primary key
+            fields = results['fields']
+            words = ' '.join([w['word'] for w in results['words']])
+            
+        if self._model:
             queryset = self._model.objects.all()
             if self._select_related:
                 queryset = queryset.select_related(*self._select_related_fields, **self._select_related_args)
             if self._extra:
                 queryset = queryset.extra(**self._extra)
-            pks = getattr(self._model._meta, 'pks', None)
-            if pks is None or len(pks) == 1:
-                queryset = queryset.filter(pk__in=[r['id'] for r in results['matches']])
-                queryset = dict([(o.pk, o) for o in queryset])
-            else:
-                for r in results['matches']:
-                    r['id'] = ', '.join([unicode(r['attrs'][p.column]) for p in pks])
-                q = reduce(operator.or_, [reduce(operator.and_, [Q(**{p.name: r['attrs'][p.column]}) for p in pks]) for r in results['matches']])
-                if q:
-                    queryset = queryset.filter(q)
-                    queryset = dict([(', '.join([unicode(p) for p in o.pks]), o) for o in queryset])
-                else:
-                    queryset = None
-        
-            if queryset:
-                self.__metadata = {
-                    'total': results['total'],
-                    'total_found': results['total_found'],
-                    'words': results['words'],
-                }
 
+            # django-sphinx supports the compositepks branch
+            # as well as custom id columns in your sphinx configuration
+            # but all primary key columns still need to be present in the field list
+            pks = getattr(self._model._meta, 'pks', [self._model._meta.pk])
+            for r in results['matches']:
+                r['id'] = ', '.join([unicode(r['attrs'][p.column]) for p in pks])
+            
+            # Join our Q objects to get a where clause which
+            # matches all primary keys, even across multiple columns
+            q = reduce(operator.or_, [reduce(operator.and_, [Q(**{p.name: r['attrs'][p.column]}) for p in pks]) for r in results['matches']])
+            
+            queryset = queryset.filter(q)
+            queryset = dict([(', '.join([unicode(p) for p in o.pks]), o) for o in queryset])
+            
+            if queryset:
                 if self._passages:
-                    fields = results['fields']
-                    words = ' '.join([w['word'] for w in results['words']])
+                    # TODO: clean this up
                     for r in results['matches']:
                         if r['id'] in queryset:
                             r['passages'] = self._get_passages(queryset[r['id']], fields, words)
@@ -522,25 +545,31 @@ class SphinxQuerySet(object):
                 results = []
         else:
             "We did a query without a model, lets see if there's a content_type"
-            self.__metadata = {
-                'total': results['total'],
-                'total_found': results['total_found'],
-                'words': results['words'],
-            }
             results['attrs'] = dict(results['attrs'])
             if 'content_type' in results['attrs']:
                 "Now we have to do one query per content_type"
                 objcache = {}
                 for r in results['matches']:
                     ct = r['attrs']['content_type']
-                    if ct not in objcache:
-                        objcache[ct] = {}
-                    objcache[ct][r['id']] = None
+                    objcache.setdefault(ct, {})[r['id']] = None
                 for ct in objcache:
-                    queryset = ContentType.objects.get(pk=ct).model_class().objects.filter(pk__in=objcache[ct])
+                    model_class = ContentType.objects.get(pk=ct).model_class()
+                    pks = getattr(model_class._meta, 'pks', [model_class._meta.pk])
+                    for r in results['matches']:
+                        if r['attrs']['content_type'] == ct:
+                            val = ', '.join([unicode(r['attrs'][p.column]) for p in pks])
+                            objcache[ct][r['id']] = r['id'] = val
+                            
+                    q = reduce(operator.or_, [reduce(operator.and_, [Q(**{p.name: r['attrs'][p.column]}) for p in pks]) for r in results['matches'] if r['attrs']['content_type'] == ct])
+                    queryset = model_class.objects.filter(q)
                     for o in queryset:
-                        objcache[ct][o.id] = o
-                results = [objcache[r['attrs']['content_type']][r['id']] for r in results['matches']]
+                        objcache[ct][', '.join([unicode(p) for p in o.pks])] = o
+
+                for r in results['matches']:
+                    ct = r['attrs']['content_type']
+                    if r['id'] in objcache[ct]:
+                        r['passages'] = self._get_passages(objcache[ct][r['id']], fields, words)
+                results = [SphinxProxy(objcache[r['attrs']['content_type']][r['id']], r) for r in results['matches']]
             else:
                 results = results['matches']
         self._result_cache = results
@@ -553,6 +582,8 @@ class SphinxQuerySet(object):
             opts = self._passages_opts
         else:
             opts = {}
+        if isinstance(self._index, unicode):
+            self._index = self._index.encode('utf-8')
         passages_list = client.BuildExcerpts(docs, self._index, words, opts)
         
         passages = {}
@@ -670,8 +701,10 @@ class SphinxRelation(SphinxSearch):
 
     def _get_results(self):
         results = self._get_sphinx_results()
-        if not results: return []
-        if results['matches'] and self._model:
+        if not results or not results['matches']:
+            # No matches so lets create a dummy result set
+            results = EMPTY_RESULT_SET
+        elif self._model:
             ids = []
             for r in results['matches']:
                 value = r['attrs']['@groupby']
@@ -686,16 +719,14 @@ class SphinxRelation(SphinxSearch):
             if self._extra:
                 qs = qs.extra(**self._extra)
             queryset = dict([(o.id, o) for o in qs])
-            self.__metadata = {
-                'total': results['total'],
-                'total_found': results['total_found'],
-                'words': results['words'],
-            }
             results = [ SphinxRelationProxy(queryset[k['attrs']['@groupby']], k) \
                         for k in results['matches'] \
                         if k['attrs']['@groupby'] in queryset ]
-        else:
-            results = []
+        self.__metadata = {
+            'total': results['total'],
+            'total_found': results['total_found'],
+            'words': results['words'],
+        }
         self._result_cache = results
         return results
 
