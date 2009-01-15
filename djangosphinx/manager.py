@@ -546,9 +546,10 @@ class SphinxQuerySet(object):
                     q = reduce(operator.or_, [reduce(operator.and_, [Q(**{p.name: r['attrs'][p.column]}) for p in pks]) for r in results['matches']])
                     queryset = queryset.filter(q)
                 else:
+                    for r in results['matches']:
+                        r['id'] = unicode(r['id'])
                     queryset = queryset.filter(pk__in=[r['id'] for r in results['matches']])
                 queryset = dict([(', '.join([unicode(getattr(o, p.attname)) for p in pks]), o) for o in queryset])
-            
 
                 if self._passages:
                     # TODO: clean this up
@@ -556,7 +557,7 @@ class SphinxQuerySet(object):
                         if r['id'] in queryset:
                             r['passages'] = self._get_passages(queryset[r['id']], fields, words)
                 
-                results = [SphinxProxy(queryset[unicode(r['id'])], r) for r in results['matches'] if r['id'] in queryset]
+                results = [SphinxProxy(queryset[r['id']], r) for r in results['matches'] if r['id'] in queryset]
             else:
                 results = []
         else:
