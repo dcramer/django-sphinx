@@ -535,16 +535,20 @@ class SphinxQuerySet(object):
                 # django-sphinx supports the compositepks branch
                 # as well as custom id columns in your sphinx configuration
                 # but all primary key columns still need to be present in the field list
-                pks = getattr(self._model._meta, 'pks', [self._model._meta.pk])
-                for r in results['matches']:
-                    r['id'] = ', '.join([unicode(r['attrs'][p.column]) for p in pks])
+                if results['matches'][0]['attrs']:
+                    # XXX: Sometimes attrs is empty and we cannot have custom primary key attributes
+                    pks = getattr(self._model._meta, 'pks', [self._model._meta.pk])
+                    for r in results['matches']:
+                        r['id'] = ', '.join([unicode(r['attrs'][p.column]) for p in pks])
             
-                # Join our Q objects to get a where clause which
-                # matches all primary keys, even across multiple columns
-                q = reduce(operator.or_, [reduce(operator.and_, [Q(**{p.name: r['attrs'][p.column]}) for p in pks]) for r in results['matches']])
+                    # Join our Q objects to get a where clause which
+                    # matches all primary keys, even across multiple columns
+                    q = reduce(operator.or_, [reduce(operator.and_, [Q(**{p.name: r['attrs'][p.column]}) for p in pks]) for r in results['matches']])
+                    queryset = queryset.filter(q)
+                    queryset = dict([(', '.join([unicode(getattr(o, p.attname)) for p in pks]), o) for o in queryset])
+                else:
+                    queryset = queryset.filter(pk__in=[r['id'] for r in results['matches']])
             
-                queryset = queryset.filter(q)
-                queryset = dict([(', '.join([unicode(p) for p in o.pks]), o) for o in queryset])
 
                 if self._passages:
                     # TODO: clean this up
