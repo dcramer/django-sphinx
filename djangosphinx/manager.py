@@ -556,7 +556,7 @@ class SphinxQuerySet(object):
                         if r['id'] in queryset:
                             r['passages'] = self._get_passages(queryset[r['id']], fields, words)
                 
-                results = [SphinxProxy(queryset[r['id']], r) for r in results['matches'] if r['id'] in queryset]
+                results = [SphinxProxy(queryset[unicode(r['id'])], r) for r in results['matches'] if r['id'] in queryset]
             else:
                 results = []
         else:
