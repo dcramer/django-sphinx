@@ -536,7 +536,8 @@ class SphinxQuerySet(object):
                 # as well as custom id columns in your sphinx configuration
                 # but all primary key columns still need to be present in the field list
                 pks = getattr(self._model._meta, 'pks', [self._model._meta.pk])
-                if results['matches'][0]['attrs']:
+                if results['matches'][0]['attrs'].get(pks[0].column):
+                    
                     # XXX: Sometimes attrs is empty and we cannot have custom primary key attributes
                     for r in results['matches']:
                         r['id'] = ', '.join([unicode(r['attrs'][p.column]) for p in pks])
