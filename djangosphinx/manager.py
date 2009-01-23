@@ -521,7 +521,6 @@ class SphinxQuerySet(object):
             # We need to do some initial work for passages
             # XXX: The passages implementation has a potential gotcha if your id
             # column is not actually your primary key
-            fields = results['fields']
             words = ' '.join([w['word'] for w in results['words']])
             
         if self._model:
@@ -556,7 +555,7 @@ class SphinxQuerySet(object):
                     # TODO: clean this up
                     for r in results['matches']:
                         if r['id'] in queryset:
-                            r['passages'] = self._get_passages(queryset[r['id']], fields, words)
+                            r['passages'] = self._get_passages(queryset[r['id']], results['fields'], words)
                 
                 results = [SphinxProxy(queryset[r['id']], r) for r in results['matches'] if r['id'] in queryset]
             else:
@@ -592,7 +591,7 @@ class SphinxQuerySet(object):
                 for r in results['matches']:
                     ct = r['attrs']['content_type']
                     if r['id'] in objcache[ct]:
-                        r['passages'] = self._get_passages(objcache[ct][r['id']], fields, words)
+                        r['passages'] = self._get_passages(objcache[ct][r['id']], results['fields'], words)
                 results = [SphinxProxy(objcache[r['attrs']['content_type']][r['id']], r) for r in results['matches']]
             else:
                 results = results['matches']
