@@ -584,14 +584,18 @@ class SphinxQuerySet(object):
                         for o in queryset:
                             objcache[ct][', '.join([unicode(p) for p in o.pks])] = o
                     else:
+                        for r in results['matches']:
+                            if r['attrs']['content_type'] == ct:
+                                r['id'] = unicode(r['id'])
                         queryset = model_class.objects.filter(pk__in=[r['id'] for r in results['matches'] if r['attrs']['content_type'] == ct])
                         for o in queryset:
                             objcache[ct][unicode(o.pk)] = o
                 
-                for r in results['matches']:
-                    ct = r['attrs']['content_type']
-                    if r['id'] in objcache[ct]:
-                        r['passages'] = self._get_passages(objcache[ct][r['id']], results['fields'], words)
+                if self._passages:
+                    for r in results['matches']:
+                        ct = r['attrs']['content_type']
+                        if r['id'] in objcache[ct]:
+                            r['passages'] = self._get_passages(objcache[ct][r['id']], results['fields'], words)
                 results = [SphinxProxy(objcache[r['attrs']['content_type']][r['id']], r) for r in results['matches']]
             else:
                 results = results['matches']
