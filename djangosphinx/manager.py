@@ -512,6 +512,8 @@ class SphinxQuerySet(object):
 
     def _get_results(self):
         results = self._get_sphinx_results()
+        if not results:
+            results = EMPTY_RESULT_SET
         self.__metadata = {
             'total': results['total'],
             'total_found': results['total_found'],
