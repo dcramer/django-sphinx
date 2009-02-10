@@ -551,7 +551,7 @@ class SphinxQuerySet(object):
                     for r in results['matches']:
                         r['id'] = unicode(r['id'])
                     queryset = queryset.filter(pk__in=[r['id'] for r in results['matches']])
-                queryset = dict([(', '.join([unicode(getattr(o, p.column)) for p in pks]), o) for o in queryset])
+                queryset = dict([(', '.join([unicode(getattr(o, p.attname)) for p in pks]), o) for o in queryset])
 
                 if self._passages:
                     # TODO: clean this up
