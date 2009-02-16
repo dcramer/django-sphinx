@@ -230,7 +230,7 @@ class SphinxQuerySet(object):
             return '<%s instance>' % (self.__class__.__name__,)
 
     def __len__(self):
-        return len(self._get_data())
+        return self.count()
         
     def __iter__(self):
         return iter(self._get_data())
