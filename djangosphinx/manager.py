@@ -498,15 +498,16 @@ class SphinxQuerySet(object):
         results = client.Query(self._query, self._index)
         
         # The Sphinx API doesn't raise exceptions
+
         if not results:
             if client.GetLastError():
                 raise SearchError, client.GetLastError()
             elif client.GetLastWarning():
                 raise SearchError, client.GetLastWarning()
         elif not results['matches']:
-            return EMPTY_RESULT_SET
-        else:
-            logging.debug('Found %s results for search query %s', results['total'], self._query)
+            results = EMPTY_RESULT_SET
+        
+        logging.debug('Found %s results for search query %s', results['total'], self._query)
         
         return results
 
