@@ -198,7 +198,7 @@ class SphinxQuerySet(object):
         self._query                 = ''
         self.__metadata             = None
         self._offset                = 0
-        self._limit                 = 0
+        self._limit                 = 20
 
         self._groupby               = None
         self._sort                  = None
