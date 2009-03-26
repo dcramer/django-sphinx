@@ -600,7 +600,7 @@ class SphinxQuerySet(object):
                         ct = r['attrs']['content_type']
                         if r['id'] in objcache[ct]:
                             r['passages'] = self._get_passages(objcache[ct][r['id']], results['fields'], words)
-                results = [SphinxProxy(objcache[r['attrs']['content_type']][r['id']], r) for r in results['matches']]
+                results = [SphinxProxy(objcache[r['attrs']['content_type']][r['id']], r) for r in results['matches'] if r['id'] in objcache[r['attrs']['content_type']]]
             else:
                 results = results['matches']
         self._result_cache = results
