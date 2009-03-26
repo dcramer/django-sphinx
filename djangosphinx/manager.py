@@ -188,7 +188,6 @@ class SphinxQuerySet(object):
     available_kwargs = ('rankmode', 'mode', 'weights', 'maxmatches', 'passages', 'passages_opts')
     
     def __init__(self, model=None, **kwargs):
-        self._client                = None
         self._select_related        = False
         self._select_related_args   = {}
         self._select_related_fields = []
@@ -371,11 +370,9 @@ class SphinxQuerySet(object):
 
     # Internal methods
     def _get_sphinx_client(self):
-        if not self._client:
-            self._client = sphinxapi.SphinxClient()
-            self._client.SetServer(SPHINX_SERVER, SPHINX_PORT)
-        return self._client
-
+        client = sphinxapi.SphinxClient()
+        client.SetServer(SPHINX_SERVER, SPHINX_PORT)
+        return client
 
     def _clone(self, **kwargs):
         # Clones the queryset passing any changed args
@@ -414,12 +411,6 @@ class SphinxQuerySet(object):
             client.SetWeights(map(int, self._weights))
         
         client.SetMatchMode(self._mode)
-
-        # 0.97 requires you to reset it
-        if hasattr(client, 'ResetFilters'):
-             client.ResetFilters()
-        if hasattr(client, 'ResetGroupBy'):
-             client.ResetGroupBy()
         
         def _handle_filters(filter_list, exclude=False):
             for name, values in filter_list.iteritems():
@@ -608,6 +599,7 @@ class SphinxQuerySet(object):
 
     def _get_passages(self, instance, fields, words):
         client = self._get_sphinx_client()
+
         docs = [getattr(instance, f) for f in fields]
         if isinstance(self._passages_opts, dict):
             opts = self._passages_opts
