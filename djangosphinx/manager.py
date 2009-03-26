@@ -451,9 +451,10 @@ class SphinxQuerySet(object):
                         client.SetFilterFloatRange(*args)
                     elif not exclude and self.model and name == self.model._meta.pk.column:
                         client.SetIDRange(*args[1:3])
+                    elif lookup == 'in':
+                        client.SetFilter(name, values, exclude)
                     else:
                         client.SetFilterRange(*args)
-
                 else:
                     client.SetFilter(name, values, exclude)
 
