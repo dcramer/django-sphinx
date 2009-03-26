@@ -38,11 +38,11 @@ def _is_sourcable_field(field):
     # We can use float fields in 0.98
     if sphinxapi.VER_COMMAND_SEARCH >= 0x113 and (isinstance(field, models.FloatField) or isinstance(field, models.DecimalField)):
         return True
-    if isinstance(field, models.ForeignKey):
+    elif isinstance(field, models.ForeignKey):
         return True
-    if isinstance(field, models.IntegerField) and field.choices:
+    elif isinstance(field, models.IntegerField) and field.choices:
         return True
-    if not field.rel:
+    elif not field.rel:
         return True
     return False
 
@@ -57,6 +57,40 @@ DEFAULT_SPHINX_PARAMS = {
     'log_file': '/var/log/sphinx/searchd.log',
     'data_path': '/var/data',
 }
+
+def get_index_context(index):
+    params = DEFAULT_SPHINX_PARAMS
+    params.update({
+        'index_name': index,
+        'source_name': index,
+    })
+
+    return params
+
+def get_source_context(tables, index, valid_fields):
+    params = DEFAULT_SPHINX_PARAMS
+    params.update({
+        'tables': tables,
+        'source_name': index,
+        'index_name': index,
+        'database_engine': settings.DATABASE_ENGINE,
+        'field_names': [f[1] for f in valid_fields],
+        'group_columns': [f[1] for f in valid_fields if f[2] or isinstance(f[0], models.BooleanField) or isinstance(f[0], models.IntegerField)],
+        'date_columns': [f[1] for f in valid_fields if issubclass(f[0], models.DateTimeField) or issubclass(f[0], models.DateField)],
+        'float_columns': [f[1] for f in valid_fields if isinstance(f[0], models.FloatField) or isinstance(f[0], models.DecimalField)],
+    })
+    try:
+        from django.contrib.gis.db.models import PointField
+        params.update({
+            'gis_columns': [f.column for f in valid_fields if isinstance(f, PointField)],
+            'srid': getattr(settings, 'GIS_SRID', 4326), # reasonable lat/lng default
+        })
+        if settings.DATABASE_ENGINE == 'pgsql' and params['gis_columns']:
+            params['field_names'].extend(["radians(ST_X(ST_Transform(%(field_name)s, %(srid)s))) AS %(field_name)s_longitude, radians(ST_Y(ST_Transform(%(field_name)s, %(srid)s))) AS %(field_name)s_latitude" % {'field_name': f, 'srid': params['srid']} for f in params['gis_columns']])
+    except ImportError:
+        # GIS not supported
+        pass
+    return params
 
 # Generate for single models
 
@@ -74,46 +108,34 @@ def generate_index_for_model(model_class, index=None, sphinx_params={}):
     if index is None:
         index = model_class._meta.db_table
     
-    params = DEFAULT_SPHINX_PARAMS
+    params = get_index_context(index)
     params.update(sphinx_params)
-    params.update({
-        'index_name': index,
-        'source_name': index,
-    })
     
     c = Context(params)
     
     return t.render(c)
-    
 
 def generate_source_for_model(model_class, index=None, sphinx_params={}):
     """Generates a source configmration for a model."""
     t = _get_template('source.conf')
+
+    def _the_tuple(f):
+        return (f.__class__, f.column, getattr(f.rel, 'to', None), f.choices)
+
+    valid_fields = [_the_tuple(f) for f in model_class._meta.fields if _is_sourcable_field(f)]
     
-    valid_fields = [f for f in model_class._meta.fields if _is_sourcable_field(f)]
-    
-    # Hackish solution for a bug I've introduced into composite pks branch
-    pk = model_class._meta.get_field(model_class._meta.pk.name)
-    
-    if pk not in valid_fields:
-        valid_fields.insert(0, model_class._meta.pk)
+    table = model_class._meta.db_table
     
     if index is None:
-        index = model_class._meta.db_table
-    
-    params = DEFAULT_SPHINX_PARAMS
-    params.update(sphinx_params)
+        index = table
+        
+    params = get_source_context([table], index, valid_fields)
     params.update({
-        'source_name': index,
-        'index_name': index,
-        'table_name': index,
-        'primary_key': pk.column,
-        'field_names': [f.column for f in valid_fields],
-        'group_columns': [f.column for f in valid_fields if (f.rel or isinstance(f, models.BooleanField) or isinstance(f, models.IntegerField)) and not f.primary_key],
-        'date_columns': [f.column for f in valid_fields if isinstance(f, models.DateTimeField) or isinstance(f, models.DateField)],
-        'float_columns': [f.column for f in valid_fields if isinstance(f, models.FloatField) or isinstance(f, models.DecimalField)],
+        'table_name': table,
+        'primary_key': model_class._meta.pk.column,
     })
-    
+    params.update(sphinx_params)
+
     c = Context(params)
     
     return t.render(c)
@@ -134,12 +156,8 @@ def generate_index_for_models(model_classes, index=None, sphinx_params={}):
     if index is None:
         index = '_'.join(m._meta.db_table for m in model_classes)
     
-    params = DEFAULT_SPHINX_PARAMS
+    params = get_index_context(index)
     params.update(sphinx_params)
-    params.update({
-        'index_name': index,
-        'source_name': index,
-    })
     
     c = Context(params)
     
@@ -165,18 +183,9 @@ def generate_source_for_models(model_classes, index=None, sphinx_params={}):
     if index is None:
         index = '_'.join(m._meta.db_table for m in model_classes)
     
-    params = DEFAULT_SPHINX_PARAMS
+    params = get_source_context(tables, index, valid_fields)
     params.update(sphinx_params)
-    params.update({
-        'tables': tables,
-        'source_name': index,
-        'index_name': index,
-        'field_names': [f[1] for f in valid_fields],
-        'group_columns': [f[1] for f in valid_fields if f[2] or isinstance(f[0], models.BooleanField) or isinstance(f[0], models.IntegerField)],
-        'date_columns': [f[1] for f in valid_fields if issubclass(f[0], models.DateTimeField) or issubclass(f[0], models.DateField)],
-        'float_columns': [f[1] for f in valid_fields if isinstance(f[0], models.FloatField) or isinstance(f[0], models.DecimalField)],
-    })
-    
+
     c = Context(params)
     
     return t.render(c)

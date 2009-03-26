@@ -210,7 +210,7 @@ class SphinxQuerySet(object):
         self._result_cache          = None
         self._mode                  = sphinxapi.SPH_MATCH_ALL
         self._rankmode              = getattr(sphinxapi, 'SPH_RANK_PROXIMITY_BM25', None)
-        self._model                 = model
+        self.model                 = model
         self._anchor                = {}
         self.__metadata             = {}
         
@@ -367,7 +367,7 @@ class SphinxQuerySet(object):
         return min(self._sphinx.get('total_found', 0), self._maxmatches)
 
     def reset(self):
-        return self.__class__(self._model, self._index)
+        return self.__class__(self.model, self._index)
 
     # Internal methods
     def _get_sphinx_client(self):
@@ -458,7 +458,7 @@ class SphinxQuerySet(object):
                         raise NotImplementedError, 'Related object and/or field lookup "%s" not supported' % lookup
                     if is_float:
                         client.SetFilterFloatRange(*args)
-                    elif not exclude and self._model and name == self._model._meta.pk.column:
+                    elif not exclude and self.model and name == self.model._meta.pk.column:
                         client.SetIDRange(*args[1:3])
                     else:
                         client.SetFilterRange(*args)
@@ -527,9 +527,9 @@ class SphinxQuerySet(object):
             # column is not actually your primary key
             words = ' '.join([w['word'] for w in results['words']])
             
-        if self._model:
+        if self.model:
             if results['matches']:
-                queryset = self._model.objects.all()
+                queryset = self.model.objects.all()
                 if self._select_related:
                     queryset = queryset.select_related(*self._select_related_fields, **self._select_related_args)
                 if self._extra:
@@ -538,7 +538,7 @@ class SphinxQuerySet(object):
                 # django-sphinx supports the compositepks branch
                 # as well as custom id columns in your sphinx configuration
                 # but all primary key columns still need to be present in the field list
-                pks = getattr(self._model._meta, 'pks', [self._model._meta.pk])
+                pks = getattr(self.model._meta, 'pks', [self.model._meta.pk])
                 if results['matches'][0]['attrs'].get(pks[0].column):
                     
                     # XXX: Sometimes attrs is empty and we cannot have custom primary key attributes
@@ -626,12 +626,12 @@ class SphinxQuerySet(object):
 
 class SphinxModelManager(object):
     def __init__(self, model, **kwargs):
-        self._model = model
+        self.model = model
         self._index = kwargs.pop('index', model._meta.db_table)
         self._kwargs = kwargs
     
     def _get_query_set(self):
-        return SphinxQuerySet(self._model, index=self._index, **self._kwargs)
+        return SphinxQuerySet(self.model, index=self._index, **self._kwargs)
     
     def get_index(self):
         return self._index
@@ -727,7 +727,7 @@ class SphinxRelation(SphinxSearch):
         self._query = instance._query
         self._filters = instance._filters
         self._excludes = instance._excludes
-        self._model = self._related_model
+        self.model = self._related_model
         self._groupby = self._related_attr
         self._groupsort = self._related_sort
         self._groupfunc = sphinxapi.SPH_GROUPBY_ATTR
@@ -738,7 +738,7 @@ class SphinxRelation(SphinxSearch):
         if not results or not results['matches']:
             # No matches so lets create a dummy result set
             results = EMPTY_RESULT_SET
-        elif self._model:
+        elif self.model:
             ids = []
             for r in results['matches']:
                 value = r['attrs']['@groupby']
@@ -746,7 +746,7 @@ class SphinxRelation(SphinxSearch):
                     ids.append(value)
                 else:
                     ids.extend()
-            qs = self._model.objects.filter(pk__in=set(ids))
+            qs = self.model.objects.filter(pk__in=set(ids))
             if self._select_related:
                 qs = qs.select_related(*self._select_related_fields,
                                        **self._select_related_args)
