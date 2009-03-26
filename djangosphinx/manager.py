@@ -14,7 +14,7 @@ except ImportError:
 from django.db.models.query import QuerySet, Q
 from django.conf import settings
 
-__all__ = ('SearchError', 'ConnectionError', 'SphinxSearch', 'SphinxRelation')
+__all__ = ('SearchError', 'ConnectionError', 'SphinxSearch', 'SphinxRelation', 'SphinxQuerySet')
 
 from django.contrib.contenttypes.models import ContentType
 from datetime import datetime, date
@@ -246,10 +246,11 @@ class SphinxQuerySet(object):
             if type(k) == slice:
                 start = k.start
                 stop = k.stop-k.start
-                if self._offset < start or stop > self._limit:
+                if start < self._offset or k.stop > self._limit:
                     self._result_cache = None
                 else:
-                    return self._get_data()[start-self._offset:self._limit-stop]
+                    start = start-self._offset
+                    return self._get_data()[start:k.stop]
             else:
                 if k not in range(self._offset, self._limit+self._offset):
                     self._result_cache = None
@@ -657,9 +658,8 @@ class SphinxInstanceManager(object):
         self._index = index
         
     def update(self, **kwargs):
-        assert(sphinxapi.VER_COMMAND_SEARCH >= 0x113, "You must upgrade sphinxapi to version 0.98 to use Geo Anchoring.")
-        sphinxapi.UpdateAttributes(index, kwargs.keys(), dict(self.instance.pk, map(to_sphinx, kwargs.values())))
-
+        assert(sphinxapi.VER_COMMAND_SEARCH >= 0x113, "You must upgrade sphinxapi to version 0.98 to use UpdateAttributes.")
+        sphinxapi.UpdateAttributes(self._index, kwargs.keys(), dict(self.instance.pk, map(to_sphinx, kwargs.values())))
 
 class SphinxSearch(object):
     def __init__(self, index=None, **kwargs):
@@ -667,16 +667,20 @@ class SphinxSearch(object):
         self._sphinx = None
         self._index = index
         self.model = None
-        
+    
     def __call__(self, index, **kwargs):
         warnings.warn('For non-model searches use a SphinxQuerySet instance.', DeprecationWarning)
         return SphinxQuerySet(index=index, **kwargs)
-        
+    
     def __get__(self, instance, model, **kwargs):
         if instance:
             return SphinxInstanceManager(instance, index)
         return self._sphinx
-
+    
+    def get_query_set(self):
+        """Override this method to change the QuerySet used for config generation."""
+        return self.model._default_manager.all()
+    
     def contribute_to_class(self, model, name, **kwargs):
         if self._index is None:
             self._index = model._meta.db_table

@@ -31,5 +31,5 @@ default settings.py values
 </code>
 """
 
-from manager import SearchError, ConnectionError, SphinxSearch
+from manager import *
 from utils import generate_config_for_model, generate_config_for_models
