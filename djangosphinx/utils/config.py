@@ -73,7 +73,7 @@ def get_source_context(tables, index, valid_fields):
         'tables': tables,
         'source_name': index,
         'index_name': index,
-        'database_engine': settings.DATABASE_ENGINE,
+        'database_engine': _get_database_engine(),
         'field_names': [f[1] for f in valid_fields],
         'group_columns': [f[1] for f in valid_fields if f[2] or isinstance(f[0], models.BooleanField) or isinstance(f[0], models.IntegerField)],
         'date_columns': [f[1] for f in valid_fields if issubclass(f[0], models.DateTimeField) or issubclass(f[0], models.DateField)],
@@ -85,7 +85,7 @@ def get_source_context(tables, index, valid_fields):
             'gis_columns': [f.column for f in valid_fields if isinstance(f, PointField)],
             'srid': getattr(settings, 'GIS_SRID', 4326), # reasonable lat/lng default
         })
-        if settings.DATABASE_ENGINE == 'pgsql' and params['gis_columns']:
+        if params['database_engine'] == 'pgsql' and params['gis_columns']:
             params['field_names'].extend(["radians(ST_X(ST_Transform(%(field_name)s, %(srid)s))) AS %(field_name)s_longitude, radians(ST_Y(ST_Transform(%(field_name)s, %(srid)s))) AS %(field_name)s_latitude" % {'field_name': f, 'srid': params['srid']} for f in params['gis_columns']])
     except ImportError:
         # GIS not supported
