@@ -34,6 +34,7 @@ EMPTY_RESULT_SET = dict(
     total=0,
     total_found=0,
     words=[],
+    attrs=[],
 )
 
 class SearchError(Exception): pass
@@ -497,6 +498,8 @@ class SphinxQuerySet(object):
                 raise SearchError, client.GetLastError()
             elif client.GetLastWarning():
                 raise SearchError, client.GetLastWarning()
+            else:
+                results = EMPTY_RESULT_SET
         elif not results['matches']:
             results = EMPTY_RESULT_SET
         
