@@ -444,6 +444,8 @@ class SphinxQuerySet(object):
                         if is_float:
                             _max = float(_max)
                         args = (name, _max, value, exclude)
+                    elif lookup == 'in':
+                        args = (name, values, exclude)
                     elif lookup == 'range':
                         args = (name, values[0], values[1], exclude)
                     else:
