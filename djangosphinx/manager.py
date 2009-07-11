@@ -569,6 +569,7 @@ class SphinxQuerySet(object):
                 objcache = {}
                 for r in results['matches']:
                     ct = r['attrs']['content_type']
+                    r['id'] = unicode(r['id'])
                     objcache.setdefault(ct, {})[r['id']] = None
                 for ct in objcache:
                     model_class = ContentType.objects.get(pk=ct).model_class()
@@ -585,9 +586,6 @@ class SphinxQuerySet(object):
                         for o in queryset:
                             objcache[ct][', '.join([unicode(p) for p in o.pks])] = o
                     else:
-                        for r in results['matches']:
-                            if r['attrs']['content_type'] == ct:
-                                r['id'] = unicode(r['id'])
                         queryset = model_class.objects.filter(pk__in=[r['id'] for r in results['matches'] if r['attrs']['content_type'] == ct])
                         for o in queryset:
                             objcache[ct][unicode(o.pk)] = o
