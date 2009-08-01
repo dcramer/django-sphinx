@@ -106,3 +106,9 @@ You can also now output configuration from the command line::
 	./manage.py generate_sphinx_config <appname>
 
 This will loop through all models in <appname> and attempt to find any with a SphinxSearch instance that is using the default index name (db_table).
+
+Resources
+---------
+
+* http://groups.google.com/group/django-sphinx
+* http://www.davidcramer.net/code/65/setting-up-django-with-sphinx.html
