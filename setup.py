@@ -4,7 +4,7 @@ from distutils.core import setup
 
 setup(
     name='django-sphinx',
-    version='2.01',
+    version='2.0.2',
     author='David Cramer',
     author_email='dcramer@gmail.com',
     url='http://code.google.com/p/django-sphinx/',
