@@ -1,0 +1,3 @@
+include setup.py README.rst MANIFEST.in
+recursive-include djangosphinx/templates *.conf
+global-exclude *~
