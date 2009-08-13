@@ -302,7 +302,7 @@ class SphinxQuerySet(object):
     def filter(self, **kwargs):
         filters = self._filters.copy()
         for k,v in kwargs.iteritems():
-            if hasattr(v, 'next'):
+            if hasattr(v, '__iter__'):
                 v = list(v)
             elif not (isinstance(v, list) or isinstance(v, tuple)):
                  v = [v,]
