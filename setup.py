@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='django-sphinx',
-    version='2.0.2',
+    version='2.0.3',
     author='David Cramer',
     author_email='dcramer@gmail.com',
     url='http://github.com/dcramer/django-sphinx',

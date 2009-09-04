@@ -583,12 +583,11 @@ class SphinxQuerySet(object):
                     
                         q = reduce(operator.or_, [reduce(operator.and_, [Q(**{p.name: r['attrs'][p.column]}) for p in pks]) for r in results['matches'] if r['attrs']['content_type'] == ct])
                         queryset = model_class.objects.filter(q)
-                        for o in queryset:
-                            objcache[ct][', '.join([unicode(p) for p in o.pks])] = o
                     else:
                         queryset = model_class.objects.filter(pk__in=[r['id'] for r in results['matches'] if r['attrs']['content_type'] == ct])
-                        for o in queryset:
-                            objcache[ct][unicode(o.pk)] = o
+
+                    for o in queryset:
+                        objcache[ct][', '.join([unicode(p) for p in pks])] = o
                 
                 if self._passages:
                     for r in results['matches']:
