@@ -30,9 +30,10 @@ default settings.py values
     SPHINX_PORT = 3312
 </code>
 """
+import warnings
 import os.path
 
-__version__ = (2, 0, 3)
+__version__ = (2, 1, 0)
 
 def _get_git_revision(path):
     revision_file = os.path.join(path, 'refs', 'heads', 'master')
@@ -58,5 +59,17 @@ def get_revision():
 
 __build__ = get_revision()
 
-from manager import *
-from utils import generate_config_for_model, generate_config_for_models
+def lazy_object(location):
+    def inner(*args, **kwargs):
+        parts = location.rsplit('.', 1)
+        warnings.warn('`djangosphinx.%s` is deprecated. Please use `%s` instead.' % (parts[1], location), DeprecationWarning)
+        imp = __import__(parts[0], globals(), locals(), [parts[1]], -1)
+        func = getattr(imp, parts[1])
+        if callable(func):
+            return func(*args, **kwargs)
+        return func
+    return inner
+
+SphinxSearch = lazy_object('djangosphinx.models.SphinxSearch')
+generate_config_for_model = lazy_object('djangosphinx.utils.generate_config_for_model')
+generate_config_for_models = lazy_object('djangosphinx.utils.generate_config_for_models')

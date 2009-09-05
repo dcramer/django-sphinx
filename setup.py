@@ -2,11 +2,11 @@
 
 from setuptools import setup, find_packages
 
-import djangosphinx
+from djangosphinx import version
 
 setup(
     name='django-sphinx',
-    version=".".join(map(str, djangosphinx.__version__)),
+    version=".".join(map(str, version.__version__)),
     author='David Cramer',
     author_email='dcramer@gmail.com',
     url='http://github.com/dcramer/django-sphinx',

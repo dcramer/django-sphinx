@@ -33,6 +33,8 @@ Usage
 
 The following is some example usage::
 
+	from djangosphinx.models import SphinxSearch
+	
 	class MyModel(models.Model):
 	    search = SphinxSearch() # optional: defaults to db_table
 	    # If your index name does not match MyModel._meta.db_table
@@ -76,6 +78,8 @@ The django-sphinx layer also supports some basic querying over multiple indexes.
 
 You can then do something like this::
 
+	from djangosphinx.models import SphinxSearch
+	
 	SphinxSearch('index1 index2 index3').query('hello')
 
 This will return a list of all matches, ordered by weight, from all indexes. This performs one SQL query per index with matches in it, as Django's ORM does not support SQL UNION.
@@ -87,11 +91,11 @@ django-sphinx now includes a tool to create sample configuration for your models
 
 To use it::
 
-	import djangosphinx
+	from djangosphinx.utils import *
 
 	from myproject.myapp.models import MyModel
 
-	output = djangosphinx.generate_config_for_model(MyModel)
+	output = generate_config_for_model(MyModel)
 
 	print output
 
@@ -99,7 +103,7 @@ If you have multiple models which you wish to use the UNION searching::
 
 	model_classes = (ModelOne, ModelTwoWhichResemblesModelOne)
 
-	output = djangosphinx.generate_config_for_models(model_classes)
+	output = generate_config_for_models(model_classes)
 
 You can also now output configuration from the command line::
 
