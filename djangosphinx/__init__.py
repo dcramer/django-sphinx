@@ -31,5 +31,7 @@ default settings.py values
 </code>
 """
 
+__version__ = (2, 0, 3)
+
 from manager import *
 from utils import generate_config_for_model, generate_config_for_models
