@@ -71,5 +71,6 @@ def lazy_object(location):
     return inner
 
 SphinxSearch = lazy_object('djangosphinx.models.SphinxSearch')
+SphinxQuerySet = lazy_object('djangosphinx.models.SphinxQuerySet')
 generate_config_for_model = lazy_object('djangosphinx.utils.generate_config_for_model')
 generate_config_for_models = lazy_object('djangosphinx.utils.generate_config_for_models')
