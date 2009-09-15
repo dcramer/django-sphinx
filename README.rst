@@ -49,7 +49,9 @@ The following is some example usage::
 	            'name': 100,
 	            'description': 10,
 	            'tags': 80,
-	        }
+	        },
+	        mode='SPH_MATCH_ALL',
+	        rankmode='SPH_RANK_NONE',
 	    )
 
 	queryset = MyModel.search.query('query')
@@ -72,7 +74,7 @@ Some additional methods:
 * all() (does nothing)
 * select_related() (passed to the queryset)
 * group_by(field, field, field)
-* set_options(index='', weights={}, weights=[])
+* set_options(index='', weights={}, weights=[], mode='SPH_MODE_*', rankmode='SPH_MATCH_*')
 
 The django-sphinx layer also supports some basic querying over multiple indexes. To use this you first need to understand the rules of a UNION. Your indexes must contain exactly the same fields. These fields must also include a `content_type` selection which should be the content_type id associated with that table (model).
 
