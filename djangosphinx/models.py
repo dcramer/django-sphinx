@@ -267,7 +267,7 @@ class SphinxQuerySet(object):
 
     def _format_options(self, **kwargs):
         kwargs['rankmode'] = getattr(sphinxapi, kwargs.get('rankmode', 'SPH_RANK_NONE'), None)
-        kwargs['mode'] = getattr(sphinxapi, kwargs.get('mode'), 'SPH_MATCH_ALL')
+        kwargs['mode'] = getattr(sphinxapi, kwargs.get('mode', 'SPH_MATCH_ALL'), sphinxapi.SPH_MATCH_ALL)
 
         kwargs = dict([('_%s' % (key,), value) for key, value in kwargs.iteritems() if key in self.available_kwargs])
         return kwargs
