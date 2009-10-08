@@ -587,7 +587,7 @@ class SphinxQuerySet(object):
                         queryset = model_class.objects.filter(pk__in=[r['id'] for r in results['matches'] if r['attrs']['content_type'] == ct])
 
                     for o in queryset:
-                        objcache[ct][', '.join([unicode(p) for p in pks])] = o
+                        objcache[ct][', '.join([unicode(getattr(o, p.name)) for p in pks])] = o
                 
                 if self._passages:
                     for r in results['matches']:
