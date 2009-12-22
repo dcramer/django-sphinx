@@ -310,7 +310,7 @@ class SphinxQuerySet(object):
         return self._clone(_filters=filters)
 
     def geoanchor(self, lat_attr, lng_attr, lat, lng):
-        assert(sphinxapi.VER_COMMAND_SEARCH >= 0x113, "You must upgrade sphinxapi to version 0.98 to use Geo Anchoring.")
+        assert sphinxapi.VER_COMMAND_SEARCH >= 0x113, "You must upgrade sphinxapi to version 0.98 to use Geo Anchoring."
         return self._clone(_anchor=(lat_attr, lng_attr, float(lat), float(lng)))
 
     # this actually does nothing, its just a passthru to
@@ -653,7 +653,7 @@ class SphinxInstanceManager(object):
         self._index = index
         
     def update(self, **kwargs):
-        assert(sphinxapi.VER_COMMAND_SEARCH >= 0x113, "You must upgrade sphinxapi to version 0.98 to use UpdateAttributes.")
+        assert sphinxapi.VER_COMMAND_SEARCH >= 0x113, "You must upgrade sphinxapi to version 0.98 to use UpdateAttributes."
         sphinxapi.UpdateAttributes(self._index, kwargs.keys(), dict(self.instance.pk, map(to_sphinx, kwargs.values())))
 
 class SphinxSearch(object):
@@ -669,7 +669,7 @@ class SphinxSearch(object):
     
     def __get__(self, instance, model, **kwargs):
         if instance:
-            return SphinxInstanceManager(instance, index)
+            return SphinxInstanceManager(instance, self._index)
         return self._sphinx
     
     def get_query_set(self):
