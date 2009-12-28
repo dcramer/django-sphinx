@@ -402,7 +402,10 @@ class SphinxQuerySet(object):
 
         client = self._get_sphinx_client()
 
+        params = []
+
         if self._sort:
+            params['sort=%s' % (self._sort)]
             client.SetSortMode(*self._sort)
         
         if isinstance(self._weights, dict):
@@ -410,7 +413,9 @@ class SphinxQuerySet(object):
         else:
             # assume its a list
             client.SetWeights(map(int, self._weights))
-        
+        params['weights=%s' % (self._weights)]
+
+        params['matchmode=%s' % (self._mode)]
         client.SetMatchMode(self._mode)
         
         def _handle_filters(filter_list, exclude=False):
@@ -463,19 +468,24 @@ class SphinxQuerySet(object):
 
         # Include filters
         if self._filters:
+            params['filters=%s' % (self._filters)]
             _handle_filters(self._filters)
 
         # Exclude filters
         if self._excludes:
+            params['excludes=%s' % (self._excludes)]
             _handle_filters(self._excludes, True)
         
         if self._groupby:
+            params['groupby=%s' % (self._groupby)]
             client.SetGroupBy(self._groupby, self._groupfunc, self._groupsort)
 
         if self._anchor:
+            params['geoanchor=%s' % (self._anchor)]
             client.SetGeoAnchor(*self._anchor)
 
         if self._rankmode:
+            params['rankmode=%s' % (self._rankmode)]
             client.SetRankingMode(self._rankmode)
 
         if not self._limit > 0:
@@ -505,7 +515,7 @@ class SphinxQuerySet(object):
         elif not results['matches']:
             results = EMPTY_RESULT_SET
         
-        logging.debug('Found %s results for search query %s', results['total'], self._query)
+        logging.debug('Found %s results for search query %s on %s with params: %s', results['total'], self._query, self._index, params)
         
         return results
 
@@ -669,6 +679,7 @@ class SphinxSearch(object):
     
     def __get__(self, instance, model, **kwargs):
         if instance:
+            print instance
             return SphinxInstanceManager(instance, self._index)
         return self._sphinx
     
