@@ -272,6 +272,9 @@ class SphinxQuerySet(object):
         kwargs = dict([('_%s' % (key,), value) for key, value in kwargs.iteritems() if key in self.available_kwargs])
         return kwargs
 
+    def get_query_set(self):
+        return self.model.objects.all()
+
     def set_options(self, **kwargs):
         kwargs = self._format_options(**kwargs)
         return self._clone(**kwargs)
@@ -536,7 +539,7 @@ class SphinxQuerySet(object):
             
         if self.model:
             if results['matches']:
-                queryset = self.model.objects.all()
+                queryset = self.get_query_set()
                 if self._select_related:
                     queryset = queryset.select_related(*self._select_related_fields, **self._select_related_args)
                 if self._extra:
@@ -752,7 +755,7 @@ class SphinxRelation(SphinxSearch):
                     ids.append(value)
                 else:
                     ids.extend()
-            qs = self.model.objects.filter(pk__in=set(ids))
+            qs = self.get_query_set().filter(pk__in=set(ids))
             if self._select_related:
                 qs = qs.select_related(*self._select_related_fields,
                                        **self._select_related_args)
