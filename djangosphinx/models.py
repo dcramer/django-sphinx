@@ -37,6 +37,8 @@ EMPTY_RESULT_SET = dict(
     attrs=[],
 )
 
+UNDEFINED = object()
+
 class SearchError(Exception): pass
 class ConnectionError(Exception): pass
 
@@ -103,11 +105,13 @@ class SphinxProxy(object):
     #     print object.__getattribute__(self, '_current_object')
     #     return getattr(object.__getattribute__(self, '_current_object'), name)
 
-    def __getattr__(self, name, value=None):
+    def __getattr__(self, name, value=UNDEFINED):
         if not hasattr(self._current_object, 'sphinx') and name == 'sphinx':
-            name = '_sphinx'        
+            name = '_sphinx'
         if name == '_sphinx':
             return getattr(self, '_sphinx', value)
+        if value == UNDEFINED:
+            return getattr(self._current_object, name)
         return getattr(self._current_object, name, value)
 
     def __setattr__(self, name, value):
