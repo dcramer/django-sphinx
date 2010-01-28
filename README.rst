@@ -113,6 +113,47 @@ You can also now output configuration from the command line::
 
 This will loop through all models in <appname> and attempt to find any with a SphinxSearch instance that is using the default index name (db_table).
 
+Using the Config Generator
+--------------------------
+
+*New in 2.2*
+
+django-sphinx now includes a simply python script to generate a config using your default template renderer. By default, we mean that if `coffin` is included in your INSTALLED_APPS, it uses it, otherwise it uses Django.
+
+Two variables directly relate to the config generation:
+
+	# The base path for sphinx files. Sub directories will include data, log, and run.
+	SPHINX_ROOT = '/var/sphinx-search/'
+	
+	# Optional, defaults to 'conf/sphinx.html'. This should be configuration template.
+	# See the included templates/sphinx.conf for an example.
+	SPHINX_CONFIG_TEMPLATE = 'conf/sphinx.html'
+
+Once done, your config can be passed via any sphinx command like so:
+
+	# Index your stuff
+	DJANGO_SETTINGS_MODULE=myproject.settings indexer --config /path/to/djangosphinx/config.py --all --rotate
+	
+	# Start the daemon
+	DJANGO_SETTINGS_MODULE=myproject.settings searchd --config /path/to/djangosphinx/config.py
+	
+	# Query the daemon
+	DJANGO_SETTINGS_MODULE=myproject.settings search --config /path/to/djangosphinx/config.py my query
+	
+	# Kill the daemon
+	kill -9 $(cat /var/sphinx-search/run/searchd.pid)
+
+For now, we recommend you setup some basic bash aliases or scripts to deal with this. This is just the first step in embedded config generation, so stay tuned!
+
+* Note: Make sure your PYTHON_PATH is setup properly!
+
+Frequent Questions
+------------------
+
+*How do I run multiple copies of Sphinx using django-sphinx?*
+
+The easiest way is to just run a different SPHINX_PORT setting in your settings.py. If you are using the above config generation, just modify the PORT, and start up the daemon
+
 Resources
 ---------
 
