@@ -32,14 +32,25 @@ def relative_path(*args):
     return os.path.abspath(os.path.join(settings.SPHINX_ROOT, *args))
 
 context = {
-    'DATABASE_HOST': settings.DATABASES['default']['HOST'],
-    'DATABASE_PASSWORD': settings.DATABASES['default']['PASSWORD'],
-    'DATABASE_USER': settings.DATABASES['default']['USER'],
-    'DATABASE_PORT': settings.DATABASES['default']['PORT'],
-    'DATABASE_NAME': settings.DATABASES['default']['NAME'],
-    'SPHINX_HOST': settings.SPHINX_HOST,
-    'SPHINX_PORT': settings.SPHINX_PORT,
+    'SPHINX_HOST': getattr(settings, 'SPHINX_HOST', '127.0.0.1'),
+    'SPHINX_PORT': getattr(settings, 'SPHINX_PORT', '3312'),
     'relative_path': relative_path,
 }
+if getattr(settings, 'DATABASES', None):
+    context.update({
+        'DATABASE_HOST': settings.DATABASES['default']['HOST'],
+        'DATABASE_PASSWORD': settings.DATABASES['default']['PASSWORD'],
+        'DATABASE_USER': settings.DATABASES['default']['USER'],
+        'DATABASE_PORT': settings.DATABASES['default']['PORT'],
+        'DATABASE_NAME': settings.DATABASES['default']['NAME'],
+    })
+else:
+    context.update({
+        'DATABASE_HOST': settings.DATABASE_HOST,
+        'DATABASE_PASSWORD': settings.DATABASE_PASSWORD,
+        'DATABASE_USER': settings.DATABASE_USER,
+        'DATABASE_PORT': settings.DATABASE_PORT,
+        'DATABASE_NAME': settings.DATABASE_NAME,
+    })
 
 print render_to_string(getattr(settings, 'SPHINX_CONFIG_TEMPLATE', 'conf/sphinx.conf'), context)
