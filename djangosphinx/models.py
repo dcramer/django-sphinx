@@ -278,8 +278,8 @@ class SphinxQuerySet(object):
         kwargs = dict([('_%s' % (key,), value) for key, value in kwargs.iteritems() if key in self.available_kwargs])
         return kwargs
 
-    def get_query_set(self):
-        qs = self.model.objects
+    def get_query_set(self, model):
+        qs = model._default_manager
         if self.using:
             qs = qs.db_manager('bth')
         return qs.all()
@@ -548,7 +548,7 @@ class SphinxQuerySet(object):
             
         if self.model:
             if results['matches']:
-                queryset = self.get_query_set()
+                queryset = self.get_query_set(self.model)
                 if self._select_related:
                     queryset = queryset.select_related(*self._select_related_fields, **self._select_related_args)
                 if self._extra:
@@ -670,6 +670,7 @@ class SphinxModelManager(object):
 
 class SphinxInstanceManager(object):
     """Collection of tools useful for objects which are in a Sphinx index."""
+    # TODO: deletion support
     def __init__(self, instance, index):
         self._instance = instance
         self._index = index
@@ -679,15 +680,16 @@ class SphinxInstanceManager(object):
         sphinxapi.UpdateAttributes(self._index, kwargs.keys(), dict(self.instance.pk, map(to_sphinx, kwargs.values())))
 
 class SphinxSearch(object):
-    def __init__(self, index=None, **kwargs):
+    def __init__(self, index=None, using=None, **kwargs):
         self._kwargs = kwargs
         self._sphinx = None
         self._index = index
         self.model = None
+        self.using = using
     
     def __call__(self, index, **kwargs):
         warnings.warn('For non-model searches use a SphinxQuerySet instance.', DeprecationWarning)
-        return SphinxQuerySet(index=index, **kwargs)
+        return SphinxQuerySet(index=index, using=self.using, **kwargs)
     
     def __get__(self, instance, model, **kwargs):
         if instance:
@@ -695,11 +697,9 @@ class SphinxSearch(object):
             return SphinxInstanceManager(instance, self._index)
         return self._sphinx
     
-    def get_query_set(self, model=None):
+    def get_query_set(self):
         """Override this method to change the QuerySet used for config generation."""
-        if not model:
-            model = self.model
-        return model._default_manager.all()
+        return self.model._default_manager.all()
     
     def contribute_to_class(self, model, name, **kwargs):
         if self._index is None:
@@ -766,7 +766,7 @@ class SphinxRelation(SphinxSearch):
                     ids.append(value)
                 else:
                     ids.extend()
-            qs = self.get_query_set().filter(pk__in=set(ids))
+            qs = self.get_query_set(self.model).filter(pk__in=set(ids))
             if self._select_related:
                 qs = qs.select_related(*self._select_related_fields,
                                        **self._select_related_args)
