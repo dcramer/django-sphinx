@@ -192,7 +192,7 @@ def to_sphinx(value):
 class SphinxQuerySet(object):
     available_kwargs = ('rankmode', 'mode', 'weights', 'maxmatches', 'passages', 'passages_opts')
     
-    def __init__(self, model=None, **kwargs):
+    def __init__(self, model=None, using=None, **kwargs):
         self._select_related        = False
         self._select_related_args   = {}
         self._select_related_fields = []
@@ -214,9 +214,11 @@ class SphinxQuerySet(object):
         self._result_cache          = None
         self._mode                  = sphinxapi.SPH_MATCH_ALL
         self._rankmode              = getattr(sphinxapi, 'SPH_RANK_PROXIMITY_BM25', None)
-        self.model                 = model
+        self.model                  = model
         self._anchor                = {}
         self.__metadata             = {}
+        
+        self.using                  = using
         
         options = self._format_options(**kwargs)
         for key, value in options.iteritems():
@@ -277,7 +279,10 @@ class SphinxQuerySet(object):
         return kwargs
 
     def get_query_set(self):
-        return self.model.objects.all()
+        qs = self.model.objects
+        if self.using:
+            qs = qs.db_manager('bth')
+        return qs.all()
 
     def set_options(self, **kwargs):
         kwargs = self._format_options(**kwargs)
@@ -599,9 +604,9 @@ class SphinxQuerySet(object):
                                 objcache[ct][r['id']] = r['id'] = val
                     
                         q = reduce(operator.or_, [reduce(operator.and_, [Q(**{p.name: r['attrs'][p.column]}) for p in pks]) for r in results['matches'] if r['attrs']['content_type'] == ct])
-                        queryset = model_class.objects.filter(q)
+                        queryset = self.get_query_set(model_class).filter(q)
                     else:
-                        queryset = model_class.objects.filter(pk__in=[r['id'] for r in results['matches'] if r['attrs']['content_type'] == ct])
+                        queryset = self.get_query_set(model_class).filter(pk__in=[r['id'] for r in results['matches'] if r['attrs']['content_type'] == ct])
 
                     for o in queryset:
                         objcache[ct][', '.join([unicode(getattr(o, p.name)) for p in pks])] = o
@@ -690,9 +695,11 @@ class SphinxSearch(object):
             return SphinxInstanceManager(instance, self._index)
         return self._sphinx
     
-    def get_query_set(self):
+    def get_query_set(self, model=None):
         """Override this method to change the QuerySet used for config generation."""
-        return self.model._default_manager.all()
+        if not model:
+            model = self.model
+        return model._default_manager.all()
     
     def contribute_to_class(self, model, name, **kwargs):
         if self._index is None:
