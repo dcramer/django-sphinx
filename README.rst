@@ -147,6 +147,25 @@ For now, we recommend you setup some basic bash aliases or scripts to deal with 
 
 * Note: Make sure your PYTHON_PATH is setup properly!
 
+Using Sphinx in Admin
+---------------------
+
+Sphinx includes it's own ModelAdmin class to allow you to use it with Django's built-in admin app.
+
+To use it, see the following example::
+
+	from djangosphinx.admin import SphinxModelAdmin
+	
+	class MyAdmin(SphinxModelAdmin):
+		index = 'my_index_name' # defaults to Model._meta.db_table
+		weights = {'field': 100}
+
+Limitations? You know it.
+
+- Only shows your max sphinx results (defaults to 1000)
+- Filters currently don't work.
+- This is a huge hack, so it may or may not continue working when Django updates.
+
 Frequent Questions
 ------------------
 

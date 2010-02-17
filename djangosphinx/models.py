@@ -530,6 +530,15 @@ class SphinxQuerySet(object):
         logging.debug('Found %s results for search query %s on %s with params: %s', results['total'], self._query, self._index, ', '.join(params))
         
         return results
+    
+    def get(self, **kwargs):
+        """Hack to support ModelAdmin"""
+        queryset = self.model._default_manager
+        if self._select_related:
+            queryset = queryset.select_related(*self._select_related_fields, **self._select_related_args)
+        if self._extra:
+            queryset = queryset.extra(**self._extra)
+        return queryset.get(**kwargs)
 
     def _get_results(self):
         results = self._get_sphinx_results()
