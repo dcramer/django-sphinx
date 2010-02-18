@@ -281,7 +281,7 @@ class SphinxQuerySet(object):
     def get_query_set(self, model):
         qs = model._default_manager
         if self.using:
-            qs = qs.db_manager('bth')
+            qs = qs.db_manager(self.using)
         return qs.all()
 
     def set_options(self, **kwargs):
