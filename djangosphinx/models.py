@@ -345,15 +345,18 @@ class SphinxQuerySet(object):
     # keywords are @id, @weight, @rank, and @relevance
     def order_by(self, *args, **kwargs):
         mode = kwargs.pop('mode', sphinxapi.SPH_SORT_EXTENDED)
-        sort_by = []
-        for arg in args:
-            sort = 'ASC'
-            if arg[0] == '-':
-                arg = arg[1:]
-                sort = 'DESC'
-            if arg == 'id':
-                arg = '@id'
-            sort_by.append('%s %s' % (arg, sort))
+        if mode == sphinxapi.SPH_SORT_EXTENDED:
+            sort_by = []
+            for arg in args:
+                sort = 'ASC'
+                if arg[0] == '-':
+                    arg = arg[1:]
+                    sort = 'DESC'
+                if arg == 'id':
+                    arg = '@id'
+                sort_by.append('%s %s' % (arg, sort))
+        else:
+            sort_by = args
         if sort_by:
             return self._clone(_sort=(mode, ', '.join(sort_by)))
         return self
