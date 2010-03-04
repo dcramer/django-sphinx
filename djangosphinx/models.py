@@ -343,7 +343,8 @@ class SphinxQuerySet(object):
 
     # you cannot order by @weight (it always orders in descending)
     # keywords are @id, @weight, @rank, and @relevance
-    def order_by(self, *args):
+    def order_by(self, *args, **kwargs):
+        mode = kwargs.pop('mode', sphinxapi.SPH_SORT_EXTENDED)
         sort_by = []
         for arg in args:
             sort = 'ASC'
@@ -354,7 +355,7 @@ class SphinxQuerySet(object):
                 arg = '@id'
             sort_by.append('%s %s' % (arg, sort))
         if sort_by:
-            return self._clone(_sort=(sphinxapi.SPH_SORT_EXTENDED, ', '.join(sort_by)))
+            return self._clone(_sort=(mode, ', '.join(sort_by)))
         return self
                     
     # pass these thru on the queryset and let django handle it
