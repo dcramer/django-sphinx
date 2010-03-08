@@ -6,6 +6,7 @@ import warnings
 import operator
 import apis.current as sphinxapi
 import logging
+import re
 try:
     import decimal
 except ImportError:
@@ -342,8 +343,7 @@ class SphinxQuerySet(object):
         return self._clone(_excludes=filters)
 
     def escape(self, value):
-        cl = self._get_sphinx_client()
-        return cl.EscapeString(value)
+        return re.sub(r"([=\(\)|\-!@~\"&/\\\^\$\=])", r"\\\1", value)
 
     # you cannot order by @weight (it always orders in descending)
     # keywords are @id, @weight, @rank, and @relevance
