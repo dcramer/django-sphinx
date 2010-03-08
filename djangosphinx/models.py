@@ -341,6 +341,10 @@ class SphinxQuerySet(object):
             filters.setdefault(k, []).extend(map(to_sphinx, v))
         return self._clone(_excludes=filters)
 
+    def escape(self, value):
+        cl = self._get_sphinx_client()
+        return cl.EscapeString(value)
+
     # you cannot order by @weight (it always orders in descending)
     # keywords are @id, @weight, @rank, and @relevance
     def order_by(self, *args, **kwargs):
