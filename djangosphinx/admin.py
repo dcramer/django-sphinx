@@ -7,6 +7,7 @@ class SphinxModelAdmin(ModelAdmin):
     weights = None
     # This is a hack
     search_fields = ['pk']
+    actions = None
     
     def queryset(self, request):
         return SphinxQuerySet(
