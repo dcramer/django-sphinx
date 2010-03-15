@@ -330,7 +330,12 @@ class SphinxQuerySet(object):
     # keep things looking/working generally the same
     def all(self):
         return self
-
+    
+    def none(self):
+        c = EmptySphinxQuerySet()
+        c.__dict__.update(self.__dict__.copy())
+        return c
+        
     # only works on attributes
     def exclude(self, **kwargs):
         filters = self._excludes.copy()
@@ -658,6 +663,10 @@ class SphinxQuerySet(object):
             c += 1
         return passages
 
+class EmptySphinxQuerySet(SphinxQuerySet):
+    def _get_sphinx_results(self):
+        return None
+
 class SphinxModelManager(object):
     def __init__(self, model, **kwargs):
         self.model = model
@@ -672,6 +681,9 @@ class SphinxModelManager(object):
     
     def all(self):
         return self._get_query_set()
+    
+    def none(self):
+        return self._get_query_set().none()
     
     def filter(self, **kwargs):
         return self._get_query_set().filter(**kwargs)
@@ -710,7 +722,6 @@ class SphinxSearch(object):
     
     def __get__(self, instance, model, **kwargs):
         if instance:
-            print instance
             return SphinxInstanceManager(instance, self._index)
         return self._sphinx
     

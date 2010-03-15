@@ -68,8 +68,11 @@ class SphinxChangeList(ChangeList):
             qs = qs.order_by('%s%s' % ((self.order_type == 'desc' and '-' or ''), self.order_field))
 
         if self.query:
-            print self.query
             qs = qs.query(self.query)
+
+        if not (lookup_params or self.query):
+            # We don't show bare result sets in Sphinx
+            return qs.none()
 
         return qs
     
