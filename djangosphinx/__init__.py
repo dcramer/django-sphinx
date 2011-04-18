@@ -33,7 +33,7 @@ default settings.py values
 import warnings
 import os.path
 
-__version__ = (2, 2, 3)
+__version__ = (2, 2, 4)
 
 def _get_git_revision(path):
     revision_file = os.path.join(path, 'refs', 'heads', 'master')
