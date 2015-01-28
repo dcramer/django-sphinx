@@ -1,3 +1,5 @@
+**This project is no longer maintained**
+
 This is a layer that functions much like the Django ORM does except it works on top of the Sphinx (http://www.sphinxsearch.com) full-text search engine.
 
 Please Note: You will need to create your own sphinx indexes and install sphinx on your server to use this app.
